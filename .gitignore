@@ -1,0 +1,4 @@
+# Documentation assets and local editor state
+.vscode/
+.DS_Store
+Thumbs.db
