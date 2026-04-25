@@ -8,6 +8,8 @@
 
 Vyrox Docs is the public technical reference for architecture, API behavior, and security decisions across the Vyrox platform, intended for engineers who prefer verifiable detail over marketing adjectives. It exists as a dedicated repository so documentation quality is versioned, reviewable, and auditable independently of implementation churn, which is essential in an open-core model where trust starts with what a CISO can read before deployment.
 
+Website: vyrox.dev (coming soon)
+
 ## Why This Exists
 
 Security tooling fails in one of two ways: poor implementation or poor understanding of implementation. Teams spend plenty of time on the first and often leave the second for later, usually the day before an investor or procurement call.
@@ -78,6 +80,8 @@ Contributions are most useful when they improve technical accuracy, remove ambig
 Do not submit narrative-only copy updates that avoid technical detail, and do not add claims about security controls unless they are implemented and testable. If a statement cannot be verified, it should not be in this repository.
 
 See CONTRIBUTING.md for review process and formatting expectations. Documentation pull requests are accepted, but they are held to the same accuracy standard as code changes.
+
+Security contact: sec.vyrox@proton.me
 
 ## Licence
 
