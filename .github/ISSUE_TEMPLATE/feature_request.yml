@@ -1,0 +1,53 @@
+name: Feature Request
+description: You want something new. Describe the problem first.
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The best requests describe real problems and constraints, not only preferred implementation.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that you cannot do now?
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How are you handling this today?
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution (optional)
+      description: Describe implementation ideas and tradeoffs.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Architecture docs
+        - API docs
+        - Security docs
+        - Quickstart
+        - Tooling
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How blocked are you without this?
+      options:
+        - Completely blocked
+        - Significant inconvenience
+        - Quality-of-life improvement
+    validations:
+      required: true
