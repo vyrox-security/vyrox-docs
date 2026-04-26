@@ -18,6 +18,10 @@ This repository avoids that failure mode by treating architecture and security r
 
 Separate docs also keep integration risk lower for design partners. They can evaluate assumptions and constraints quickly without waiting for private repository access.
 
+## Building in Public
+
+Security operates on trust, and trust requires transparency. We maintain a public development log detailing our architectural decisions, technical trade-offs, and lessons learned as we build the platform. See the [DEVLOG.md](DEVLOG.md) to follow along.
+
 ## Architecture
 
 ```text
@@ -37,7 +41,8 @@ Document status:
 | Document | Status | Last Updated |
 | --- | --- | --- |
 | ARCHITECTURE.md | Published | 2026-04-23 |
-| README.md | Published | 2026-04-25 |
+| DEVLOG.md | Ongoing | 2026-04-26 |
+| README.md | Published | 2026-04-26 |
 
 ## Quickstart
 
