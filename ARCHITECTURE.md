@@ -1,8 +1,8 @@
 # Vyrox — Architecture Overview
 
 > **Document:** `vyrox-docs/ARCHITECTURE.md`
-> **Version:** 0.2.0
-> **Last Updated:** 2026-05-05
+> **Version:** 0.3.0
+> **Last Updated:** 2026-05-15
 > **Visibility:** Public
 
 ---
@@ -18,6 +18,7 @@
 7. [SLA & Operational Commitments](#7-sla--operational-commitments)
 8. [Design Decisions](#8-design-decisions)
 9. [Integrating with Vyrox](#9-integrating-with-vyrox)
+10. [$1M ARR Growth Strategy](#10-1m-arr-growth-strategy)
 
 ---
 
@@ -43,7 +44,7 @@ Webhook events from your EDR console — the same events your current MSSP or in
 
 ### What we do
 
-We ingest every alert, run it through a two-stage triage pipeline (deterministic heuristics first, LLM second for ambiguous cases), and produce a verdict within seconds. For CRITICAL and HIGH alerts, your designated analyst receives an interactive Slack notification with the alert summary, MITRE ATT&CK mapping, AI reasoning, and three options: approve a containment action, deny it, or request deeper investigation.
+We ingest every alert, run it through a two-stage triage pipeline (deterministic heuristics first, LLM second for ambiguous cases), and produce a verdict within seconds. For CRITICAL and HIGH alerts, your designated analyst receives an interactive Discord notification with the alert summary, MITRE ATT&CK mapping, AI reasoning, and three options: approve a containment action, deny it, or request deeper investigation.
 
 For LOW alerts above a configurable confidence threshold, containment can be automated with your explicit opt-in.
 
@@ -61,7 +62,7 @@ Full control. The containment proxy (`vyrox-proxy`) is open-source, MIT licensed
 | Growth | 250–2,500 | $6 / endpoint / month |
 | Enterprise | 2,500+ | Custom |
 
-All tiers include: unlimited alert volume, 15-minute SLA for CRITICAL alerts, full audit log access, Slack-based analyst interface, and CrowdStrike + SentinelOne + Defender support.
+All tiers include: unlimited alert volume, 15-minute SLA for CRITICAL alerts, full audit log access, Discord-based analyst interface, and CrowdStrike + SentinelOne + Defender support.
 
 ---
 
@@ -105,7 +106,7 @@ All tiers include: unlimited alert volume, 15-minute SLA for CRITICAL alerts, fu
                       │ if CRITICAL or HIGH
                       ▼
          ┌────────────────────────┐
-         │      Slack Bot         │  Interactive alert card, per-tenant channel
+         │     Discord Bot        │  Interactive alert embed, per-tenant channel
          │                        │  [APPROVE] [DENY] [INVESTIGATE]
          └────────────┬───────────┘
                       │ human approves
@@ -134,13 +135,13 @@ This design keeps the LLM reserved for cases where pattern matching alone is ins
 
 ### Stage 2 — LLM Triage
 
-Ambiguous alerts are passed to a small language model with a structured system prompt focused on security triage. The model returns a verdict, a confidence score, and a one-sentence reasoning string. The reasoning is surfaced in the Slack card so your analyst can evaluate the AI's logic before approving any action.
+Ambiguous alerts are passed to a small language model with a structured system prompt focused on security triage. The model returns a verdict, a confidence score, and a one-sentence reasoning string. The reasoning is surfaced in the Discord embed so your analyst can evaluate the AI's logic before approving any action.
 
 The LLM produces a recommendation. A human approves or denies it. The LLM never directly triggers execution.
 
 ### Human-in-the-Loop
 
-Every CRITICAL and HIGH verdict generates an interactive Slack message in your designated channel. The analyst sees the alert summary, triage reasoning, MITRE ATT&CK tactic, and the recommended containment action before making any decision.
+Every CRITICAL and HIGH verdict generates an interactive Discord embed in your designated channel. The analyst sees the alert summary, triage reasoning, MITRE ATT&CK tactic, and the recommended containment action before making any decision.
 
 Three options are always available:
 - **Approve** — sends a signed execution request to the containment proxy
@@ -161,7 +162,7 @@ LOW severity alerts above a configurable confidence threshold can be set to auto
 | Heuristics engine | Python | Stage 1 — deterministic pattern-based triage |
 | LLM client | Python | Stage 2 — LLM triage for ambiguous alerts |
 | Database | PostgreSQL (managed) | Persists alert state, verdicts, action history |
-| Slack bot | Python, Slack Bolt | Human approval interface, per-tenant channels |
+| Discord bot | Python, py-cord | Human approval interface, per-tenant channels |
 | Containment proxy | Rust (Axum) | Executes approved actions against EDR APIs |
 | Audit log | Append-only JSONL | Permanent record of every action |
 | Tenant dashboard | Next.js | Read-only SOC metrics and alert history per tenant |
@@ -198,7 +199,7 @@ What remains proprietary is the detection intelligence — the heuristics patter
 
 ### HMAC-SHA256 Request Signing
 
-Every request between Vyrox services — from the ingestion webhook to the worker, and from the Slack bot to the proxy — is signed with HMAC-SHA256 using a shared secret. Unsigned requests are rejected at the boundary before any processing occurs.
+Every request between Vyrox services — from the ingestion webhook to the worker, and from the Discord bot to the proxy — is signed with HMAC-SHA256 using a shared secret. Unsigned requests are rejected at the boundary before any processing occurs.
 
 The proxy adds replay protection: requests with an approval timestamp older than 30 seconds are rejected with HTTP 410. A captured request cannot be replayed later to trigger an unintended action.
 
@@ -220,7 +221,7 @@ No action is ever taken without being logged. There is no silent execution path.
 
 ### Tenant Isolation
 
-Every alert, verdict, action, and audit entry is scoped to a `tenant_id`. Tenant data is isolated at the database level. API keys are per-tenant. Slack channels are per-tenant. A misconfiguration in one tenant's pipeline cannot affect another's.
+Every alert, verdict, action, and audit entry is scoped to a `tenant_id`. Tenant data is isolated at the database level. API keys are per-tenant. Discord channels are per-tenant. A misconfiguration in one tenant's pipeline cannot affect another's.
 
 ### Webhook Signature Verification
 
@@ -232,8 +233,8 @@ Incoming webhooks from CrowdStrike, SentinelOne, and Microsoft Defender are veri
 
 | Metric | Commitment |
 |---|---|
-| CRITICAL alert triage | < 15 minutes from ingestion to Slack card |
-| HIGH alert triage | < 30 minutes from ingestion to Slack card |
+| CRITICAL alert triage | < 15 minutes from ingestion to Discord embed |
+| HIGH alert triage | < 30 minutes from ingestion to Discord embed |
 | Service uptime | 99.9% monthly (ingestion + triage + notification) |
 | Audit log availability | 100% — logs are customer-owned and exportable at any time |
 | False positive rate | < 5% on containment actions (tracked per tenant, published in dashboard) |
@@ -275,7 +276,7 @@ Per-alert pricing creates an adversarial relationship: customers want fewer aler
 
 ## 9. Integrating with Vyrox
 
-Integration requires three things: a webhook configured in your EDR console, a Slack app installed in your workspace, and a one-time onboarding call to configure your alert routing preferences and containment policies.
+Integration requires three things: a webhook configured in your EDR console, a Discord bot installed in your server, and a one-time onboarding call to configure your alert routing preferences and containment policies.
 
 **Integration time for a CrowdStrike tenant: approximately 15 minutes.**
 
@@ -286,6 +287,63 @@ The webhook payload schema for CrowdStrike, SentinelOne, and Microsoft Defender 
 The security architecture, HMAC design, and audit log specification are covered in [SECURITY_WHITEPAPER.md](./SECURITY_WHITEPAPER.md).
 
 The containment proxy source code is at [github.com/vyrox-security/vyrox-proxy](https://github.com/vyrox-security/vyrox-proxy).
+
+---
+
+## 10. $1M ARR Growth Strategy
+
+Vyrox targets $1M ARR within 4 years through a phased growth model. The strategy combines direct sales with channel partnerships to reach the mid-market at scale.
+
+### Revenue Targets
+
+| Year | Target ARR | Endpoints (at $6/endpoint) | Key Milestone |
+|------|------------|---------------------------|---------------|
+| 1 | $500K | ~8,300 | Product-market fit, first 20 pilot customers |
+| 2 | $750K | ~12,500 | Self-serve onboarding live, NPS > 40 |
+| 3 | $1M | ~16,700 | MSP channel active, 100+ customers |
+
+### Growth Levers
+
+**1. Self-Serve Onboarding (Year 2)**
+- API-first architecture allowing programmatic integration
+- No sales call required for standard integrations
+- Automated provisioning and configuration
+- Target: 80% of new customers onboard without human interaction
+
+**2. MSP Channel Strategy (Year 3)**
+- White-label option for Managed Service Providers
+- Wholesale pricing: 50% of retail price for MSPs
+- Multi-tenant dashboard for MSP management
+- Target: 30% of revenue from channel by Year 4
+
+**3. Product-Led Growth**
+- Free tier for startups (< 50 endpoints)
+- Usage-based upsell triggers
+- In-app upgrade paths
+- Self-serve customer support portal
+
+**4. Expansion Revenue**
+- Land-and-expand model within accounts
+- Endpoint growth tracked monthly
+- Proactive upsell when customer hits tier thresholds
+
+### Scaling Architecture Requirements
+
+To support $1M ARR and beyond, the architecture must handle:
+
+| Requirement | Specification |
+|-------------|---------------|
+| Customer count | 200+ tenants |
+| Alert volume | 10M+ alerts/month |
+| API response time | < 200ms p99 |
+| Multi-region | US + EU data residency |
+| Uptime | 99.95% SLA |
+
+The system is designed for horizontal scaling through:
+- Stateless API services behind load balancers
+- Redis cluster for queue and cache
+- Database read replicas for reporting
+- CDN for static assets and documentation
 
 ---
 

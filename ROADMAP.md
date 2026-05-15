@@ -51,15 +51,16 @@ Build the most efficient AI-native Managed Detection and Response (MDR) service 
 | Feature | Status | Description |
 |---------|--------|-------------|
 | Auto-remediation expand | 🔄 In Progress | Network quarantine, user suspension |
-| Self-serve onboarding | 📋 Planned | No founder needed to onboard customers |
+| Self-serve onboarding | 🔄 In Progress | API-first onboarding, no sales call required |
 | Compliance reports | 📋 Planned | SOC 2, HIPAA audit log exports |
 | MSP channel | 📋 Planned | White-label option for MSPs |
 
 **Q2 2026 Deliverables**:
 - [ ] 20+ paying customers
-- [ ] Full self-serve onboarding
+- [ ] Full self-serve onboarding (80% of customers without human interaction)
 - [ ] Enterprise tier with SLA guarantees
 - [ ] Automated compliance reporting
+- [ ] Target: $500K ARR
 
 ---
 
@@ -73,12 +74,14 @@ Build the most efficient AI-native Managed Detection and Response (MDR) service 
 | API-first architecture | 📋 Planned | Programmatic access for advanced customers |
 | Threat intelligence | 📋 Planned | Integrated threat feeds |
 | EU data residency | 📋 Planned | EU region deployment option |
+| MSP channel launch | 📋 Planned | White-label for Managed Service Providers |
 
 **Q4 2026 Deliverables**:
 - [ ] 50+ customers
 - [ ] Multi-region support (US + EU)
 - [ ] SOC 2 Type II certification
 - [ ] Partner ecosystem (MSPs, integrators)
+- [ ] Target: $1M ARR (Year 4 target: $1M, Year 3 milestone: $750K)
 
 ---
 
