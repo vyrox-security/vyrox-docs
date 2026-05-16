@@ -17,7 +17,7 @@
 4. [Component Overview](#4-component-overview)
 5. [The Open-Core Model](#5-the-open-core-model)
 6. [Security Design](#6-security-design)
-7. [Pricing](#7-pricing)
+7. [SLA & Operational Commitments](#7-sla--operational-commitments)
 8. [Design Decisions](#8-design-decisions)
 9. [Integrating with Vyrox](#9-integrating-with-vyrox)
 
@@ -25,9 +25,9 @@
 
 ## 1. What Vyrox Is
 
-**The pitch:** Splunk tells you something happened. We tell you what to do about it.
+**The value proposition:** Automated alert triage that tells you what to do about each alert, not just that something happened.
 
-**Who it's for:** IT managers at companies with 50-500 employees who have CrowdStrike or SentinelOne but are the only ones triaging alerts — at 11pm, on weekends, with a spreadsheet and anxiety.
+**Who it's for:** IT managers at companies with 100-500 employees who have CrowdStrike or SentinelOne but are the only ones triaging alerts — at 11pm, on weekends, with a spreadsheet and anxiety.
 
 **What we do:**
 - Auto-triage every alert from your EDR
@@ -67,7 +67,7 @@ The EDR vendors (CrowdStrike, SentinelOne) detect well. They don't triage well. 
     │          │           │
     ▼          ▼           ▼
 [EDR]    [Vuln Scanners]  [Cloud APIs]
-(CrowdStrike/SentinelOne/Defender)  (Tenable/Rapid7)  (AWS/Azure AD)
+(CrowdStrike/SentinelOne/Defender)  (Planned: Tenable/Rapid7)  (Planned: AWS/Azure AD)
 
     │              │              │
     └──────────────┼──────────────┘

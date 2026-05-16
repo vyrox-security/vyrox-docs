@@ -1,6 +1,6 @@
 # Vyrox — AI Security Copilot
 
-> **Vyrox is an AI Security Copilot that runs your SOC 24/7.** We handle everything: continuous monitoring, threat hunting, automated response, vulnerability mapping, and compliance evidence — so you don't have to.
+> **Vyrox is an AI Security Copilot that runs your SOC 24/7.** We automatically triage alerts, surface critical incidents in Discord, and handle containment — so you don't have to.
 
 [![Open Source: vyrox-proxy](https://img.shields.io/badge/Open%20Source-vyrox--proxy-blue?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy/blob/main/LICENSE)
@@ -43,7 +43,7 @@ Vyrox is your 24/7 AI security operations team. We don't just triage alerts — 
 SHA-256 chained)       publicly auditable)
 ```
 
-**The promise:** "We'll run your security operations the way a $500K/year SOC team would — for $2K/month."
+**The promise:** "We'll run your security operations the way a $500K/year SOC team would — for a fraction of that cost."
 
 ---
 
@@ -168,7 +168,7 @@ Full security policy: [SECURITY.md](./SECURITY.md)
 
 `vyrox-proxy` and `vyrox-simulator` are MIT licensed.
 
-`vyrox-docs`, `vyrox-landing`, and the `vyrox` monorepo are proprietary.
+`vyrox-docs`, `vyrox-landing`, `vyrox-heuristics`, `vyrox-deploy`, `vyrox-design-partners`, and the `vyrox` monorepo are proprietary.
 
 ---
 

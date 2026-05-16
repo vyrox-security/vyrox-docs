@@ -69,7 +69,7 @@ lint:
       if [ -f "$f" ]; then
         echo "Checking $f..."
         # Check for trailing whitespace
-        grep -n "[[:space:]]$$" "$f" || true
+        grep -n "[[:space:]]$" "$f" || true
         # Check for broken internal links
         grep -En "\]\([a-zA-Z_]*\.md\)" "$f" | while read line; do
           file=$(echo "$line" | sed 's/:.*//')
@@ -95,7 +95,7 @@ format:
     @for f in *.md; do
       if [ -f "$f" ]; then
         # Remove trailing whitespace
-        sed -i 's/[[:space:]]*$$//' "$f"
+        sed -i 's/[[:space:]]*$//' "$f"
         # Ensure single newline at end of file
         perl -i -pe 's/\n*\z/\n/' "$f"
       fi

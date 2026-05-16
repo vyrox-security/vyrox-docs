@@ -69,7 +69,7 @@ Trigger a test alert in your EDR:
 1. Open terminal on a monitored endpoint
 2. Run: `powershell -Command "Invoke-WebRequest -Uri http://example.com"`
 
-Within 30 seconds, you should see a LOW severity alert in your Discord channel.
+Within 30 seconds, Vyrox should ingest the event as a LOW severity alert. By default, LOW alerts are auto-dismissed and won't appear in Discord (see behavior table below). If you want a visible Discord message for verification, use Step 6 instead.
 
 ---
 
