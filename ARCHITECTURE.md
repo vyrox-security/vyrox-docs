@@ -12,6 +12,7 @@
 ## Table of Contents
 
 1. [What Vyrox Is](#1-what-vyrox-is)
+1.5. [Competitive Moats (MVP Priority)](#15-competitive-moats-mvp-priority)
 2. [The Problem](#2-the-problem)
 3. [The Pipeline](#3-the-pipeline)
 4. [Component Overview](#4-component-overview)
@@ -38,6 +39,46 @@
 **The moat:** We built the triage logic your EDR vendor should have built. Alert signal quality — the ability to say "this is actually malicious" vs "this is a scheduled task" — is domain knowledge, not AI magic.
 
 **Setup time:** 15 minutes. No log management, no query language, no data lake.
+
+---
+
+## 1.5 Competitive Moats (MVP Priority)
+
+> **Build these in v0.1.0.** These are the defensibility layer that makes Vyrox hard to replicate.
+
+### Moat 1: Data Network Effect
+
+**Every alert processed makes triage better for everyone.**
+
+- Heuristics engine improves with every alert across all customers
+- LLM prompts get better from collective signal
+- False positive patterns surface across the customer base
+- Benign baseline shifts as more companies contribute
+
+**The pitch:** "20 companies triaging alerts together. Your CrowdStrike sees Mimikatz on Tuesday, we auto-classified it by Wednesday — across all 20 tenants."
+
+**MVP implementation:**
+- Aggregate anonymized pattern matching stats in dashboard ("Your alert matched patterns seen in 12 other Vyrox customers this week")
+- Document the flywheel explicitly in sales materials
+- Case studies showing collective learning ("40% fewer false positives because we process 50K alerts/week across customer base")
+
+---
+
+### Moat 2: Workflow Lock-in
+
+**After 90 days, switching means losing 500 triage decisions of institutional memory.**
+
+- Analysts build muscle memory on approve/deny/investigate in Discord
+- Team-specific verdict routing becomes embedded
+- Alert history and decisions become institutional knowledge
+- Discord channel organization reflects team structure
+
+**The pitch:** "After 90 days of use, your team has 500 triage decisions logged. Switching means starting from zero."
+
+**MVP implementation:**
+- Triage history accessible in Discord — show analyst accept/deny patterns over time
+- Make audit log ownership explicit — switching means losing it
+- Store per-customer routing rules (some teams always approve "suspicious PowerShell", others always deny)
 
 ---
 
