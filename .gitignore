@@ -1,4 +1,9 @@
 # Documentation assets and local editor state
+
+# Dev config
+.claude/
+
+# VS Code and OS
 .vscode/
 .DS_Store
 Thumbs.db
