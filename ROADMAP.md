@@ -1,7 +1,7 @@
 # Vyrox Product Roadmap
 
 > **Document:** `vyrox-docs/ROADMAP.md`
-> **Version:** 1.0.0
+> **Version:** 2.0.0
 > **Last Updated:** 2026-05-15
 > **Visibility:** Public
 
@@ -9,24 +9,28 @@
 
 ## Vision
 
-Build the most efficient AI-native Managed Detection and Response (MDR) service that delivers enterprise-grade security at a fraction of traditional MSSP costs.
+**From MDR to AI Security Copilot** — Vyrox is evolving from an alert triage service to an autonomous security operations platform that runs your SOC 24/7.
+
+**The new promise:** "We'll run your security operations the way a SOC team would — at a fraction of the traditional cost."
 
 ---
 
 ## Guiding Principles
 
-1. **Automation-first**: Automate everything that can be automated; humans decide only on exceptions
-2. **Transparency**: Open-source the execution layer; keep intelligence proprietary
-3. **Customer outcomes**: Measure success by MTTD, MTTR, and false positive rate — not features shipped
-4. **Bootstrapped growth**: Sustainable unit economics from day one; profit beforeVC
+1. **Autonomous operations**: The goal is 24/7 coverage without human intervention on routine tasks
+2. **Automation-first**: Automate everything that can be automated; humans decide only on exceptions
+3. **Transparency**: Open-source the execution layer; keep intelligence proprietary
+4. **Customer outcomes**: Measure success by security posture improvement — not alerts processed
+5. **Bootstrapped growth**: Sustainable unit economics from day one; profit before VC
+6. **Outcome-based pricing**: Align on security outcomes, not just monitoring endpoints
 
 ---
 
 ## Roadmap Phases
 
-### Phase 1: Foundation (Q1 2026)
+### Phase 1: Foundation (Q1-Q2 2026)
 
-**Goal**: Prove the core pipeline works in production
+**Goal**: Transform from alert triage to continuous monitoring
 
 | Feature | Status | Description |
 |---------|--------|-------------|
@@ -35,53 +39,67 @@ Build the most efficient AI-native Managed Detection and Response (MDR) service 
 | LLM triage | ✅ Done | OpenRouter integration for ambiguous alerts |
 | Discord integration | ✅ Done | Real-time alert notifications, approval workflows |
 | Containment proxy | ✅ Done | vyrox-proxy (MIT licensed), auto-remediation |
+| Continuous Dashboard | 🔄 In Progress | Security posture overview, not just alerts |
+| Vulnerability Surface Map | 📋 Planned | External attack surface scanning |
+| Automated Playbook Engine | 🔄 In Progress | Auto-remediate known threats |
+| 24/7 Autonomous Mode | 🔄 In Progress | Coverage beyond business hours |
+| Compliance Evidence Generator | 📋 Planned | Automated SOC 2/HIPAA evidence |
 
-**Q1 2026 Deliverables**:
+**Phase 1 Deliverables**:
 - [ ] Production-ready multi-tenant deployment
-- [ ] Customer dashboard v1 (alert timeline, metrics)
-- [ ] SOC 2 Type I certification
+- [ ] Security posture dashboard (not just alert timeline)
+- [ ] Vulnerability surface map
+- [ ] 5 core automated response playbooks
+- [ ] 24/7 autonomous monitoring mode
 - [ ] 10+ pilot customers
-
----
-
-### Phase 2: Scale (Q2 2026)
-
-**Goal**: Product hardening and operational excellence
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Auto-remediation expand | 🔄 In Progress | Network quarantine, user suspension |
-| Self-serve onboarding | 🔄 In Progress | API-first onboarding, no sales call required |
-| Compliance reports | 📋 Planned | SOC 2, HIPAA audit log exports |
-| MSP channel | 📋 Planned | White-label option for MSPs |
-
-**Q2 2026 Deliverables**:
-- [ ] 20+ paying customers
-- [ ] Full self-serve onboarding (80% of customers without human interaction)
-- [ ] Enterprise tier with SLA guarantees
-- [ ] Automated compliance reporting
 - [ ] Target: $500K ARR
 
 ---
 
-### Phase 3: Growth (Q3-Q4 2026)
+### Phase 2: Expansion (Q3-Q4 2026)
 
-**Goal**: Accelerate customer acquisition and expand capabilities
+**Goal**: Add capabilities that make it a complete SOC replacement
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Vertical templates | 📋 Planned | Industry-specific detection patterns |
-| API-first architecture | 📋 Planned | Programmatic access for advanced customers |
-| Threat intelligence | 📋 Planned | Integrated threat feeds |
-| EU data residency | 📋 Planned | EU region deployment option |
-| MSP channel launch | 📋 Planned | White-label for Managed Service Providers |
+| Proactive Threat Hunting | 📋 Planned | Find attackers before they act |
+| SIEM-Lite Log Aggregation | 📋 Planned | Centralize security events without SIEM complexity |
+| Incident Response Orchestration | 📋 Planned | Runbooks, not just alerts |
+| Weekly AI Security Briefing | 📋 Planned | Auto-generated threat report |
+| Integration Hub | 📋 Planned | 50+ tool integrations |
+| Enterprise Tier | 📋 Planned | Custom SLAs, dedicated advisor |
 
-**Q4 2026 Deliverables**:
+**Phase 2 Deliverables**:
+- [ ] Proactive threat hunting (scheduled campaigns)
+- [ ] Lightweight log aggregation
+- [ ] Incident response playbooks
+- [ ] Weekly AI-generated security briefings
+- [ ] 20+ paying customers
+- [ ] Full self-serve onboarding (80% of customers without human interaction)
+- [ ] Enterprise tier with SLA guarantees
+- [ ] Target: $1M ARR
+
+---
+
+### Phase 3: Scale (2027+)
+
+**Goal**: Features that make it impossible to operate without
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Board-Level Reporting | 📋 Planned | CISO's #1 pain point — automated |
+| MSP Multi-Tenant Dashboard | 📋 Planned | White-label for channel partners |
+| API-First Architecture | 📋 Planned | Programmatic everything |
+| EU Data Residency | 📋 Planned | GDPR compliance |
+| SOC 2 Type II | 📋 Planned | Enterprise-ready certification |
+
+**Phase 3 Deliverables**:
 - [ ] 50+ customers
+- [ ] MSP channel (30% of revenue)
 - [ ] Multi-region support (US + EU)
 - [ ] SOC 2 Type II certification
 - [ ] Partner ecosystem (MSPs, integrators)
-- [ ] Target: $1M ARR (Year 4 target: $1M, Year 3 milestone: $750K)
+- [ ] Target: $2M ARR
 
 ---
 
