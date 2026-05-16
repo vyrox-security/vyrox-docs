@@ -1,6 +1,6 @@
 ![Vyrox Docs Banner](assets/vyrox-docs-banner.png)
 
-# Vyrox — AI Security Copilot
+# Your AI Security Copilot
 
 > **Vyrox is an AI Security Copilot that runs your SOC 24/7.** We automatically triage alerts, surface critical incidents in Discord, and handle containment — so you don't have to.
 
