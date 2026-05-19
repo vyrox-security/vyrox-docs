@@ -1,0 +1,19 @@
+{
+  "name": "vyrox-docs",
+  "version": "1.0.0",
+  "description": "Vyrox Documentation Website",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site - no build required'",
+    "preview": "npx serve . -l 3000"
+  },
+  "keywords": [
+    "documentation",
+    "security",
+    "mdr",
+    "edr"
+  ],
+  "author": "Vyrox Security",
+  "license": "MIT"
+}
