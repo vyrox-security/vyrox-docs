@@ -3,6 +3,9 @@
 # Production-grade task runner for documentation.
 # Public docs: ARCHITECTURE.md, API_REFERENCE.md, QUICKSTART.md
 #
+# The docs site can be served as static HTML (index.html) or as
+# markdown files. Both are maintained in sync.
+#
 # Usage:
 #   just              # Show all commands
 #   just <command>   # Run specific command
@@ -126,6 +129,35 @@ lines:
         echo "  $f: $count lines"
       fi
     done
+
+# =====================================================================
+# WEBSITE
+# =====================================================================
+
+# Serve the documentation website locally
+serve:
+    @echo "Starting local docs server..."
+    @npx serve . -l 3000
+
+# Serve with live reload
+dev:
+    @echo "Starting development server with live reload..."
+    @npx serve . -l 3000 -c -1
+
+# Build the static site (for deployment)
+build:
+    @echo "Building static site..."
+    @if [ -f index.html ]; then \
+        echo "index.html exists - static site ready"; \
+    else \
+        echo "No index.html found - run 'just website' first"; \
+    fi
+
+# Validate website HTML
+validate:
+    @echo "Validating HTML..."
+    @grep -c "<!DOCTYPE html>" index.html || echo "WARNING: index.html not found or missing DOCTYPE"
+    @grep -c "<html" index.html || echo "WARNING: no html tag found"
 
 # =====================================================================
 # CLEANUP
