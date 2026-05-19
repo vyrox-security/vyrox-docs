@@ -54,12 +54,7 @@ view-all:
 # Check for broken links (requires markdown-link-check)
 check-links:
     @echo "Checking markdown links..."
-    @grep -rh "\[.*\](.*\.md)" . --include="*.md" | grep -v "^\s*#" | while read line; do
-      target=$(echo "$line" | sed 's/.*](\([^)]*\)).*/\1/')
-      if [ -n "$target" ] && [ ! -f "$target" ]; then
-        echo "Broken link: $target"
-      fi
-    done || true
+    @grep -rh "\[.*\](.*\.md)" . --include="*.md" | grep -v "^\s*#" | while read line; do target=$(echo "$line" | sed 's/.*](\([^)]*\)).*/\1/'); if [ -n "$target" ] && [ ! -f "$target" ]; then echo "Broken link: $target"; fi; done || true
 
 # =====================================================================
 # LINTING
@@ -68,21 +63,7 @@ check-links:
 # Lint markdown files
 lint:
     @echo "Linting markdown files..."
-    @for f in *.md; do
-      if [ -f "$f" ]; then
-        echo "Checking $f..."
-        # Check for trailing whitespace
-        grep -n "[[:space:]]$" "$f" || true
-        # Check for broken internal links
-        grep -En "\]\([a-zA-Z_]*\.md\)" "$f" | while read line; do
-          file=$(echo "$line" | sed 's/:.*//')
-          link=$(echo "$line" | sed 's/.*](\([^)]*\)).*/\1/')
-          if [ ! -f "$link" ]; then
-            echo "$file: broken link [$link]"
-          fi
-        done
-      fi
-    done
+    @for f in *.md; do if [ -f "$f" ]; then echo "Checking $f..."; grep -n "[[:space:]]$" "$f" || true; grep -En "\]\([a-zA-Z_]*\.md\)" "$f" | while read line; do file=$(echo "$line" | sed 's/:.*//'); link=$(echo "$line" | sed 's/.*](\([^)]*\)).*/\1/'); if [ ! -f "$link" ]; then echo "$file: broken link [$link]"; fi; done; fi; done
 
 # Check for TODO markers
 check-todos:
@@ -95,14 +76,7 @@ check-todos:
 # Format markdown (basic cleanup)
 format:
     @echo "Formatting markdown files..."
-    @for f in *.md; do
-      if [ -f "$f" ]; then
-        # Remove trailing whitespace
-        sed -i 's/[[:space:]]*$//' "$f"
-        # Ensure single newline at end of file
-        perl -i -pe 's/\n*\z/\n/' "$f"
-      fi
-    done
+    @for f in *.md; do if [ -f "$f" ]; then sed -i 's/[[:space:]]*$//' "$f"; perl -i -pe 's/\n*\z/\n/' "$f"; fi; done
 
 # =====================================================================
 # WORD COUNT
@@ -110,25 +84,11 @@ format:
 
 # Count words in documentation
 words:
-    @echo "Word count by file:"
-    @for f in *.md; do
-      if [ -f "$f" ]; then
-        count=$(wc -w < "$f")
-        echo "  $f: $count words"
-      fi
-    done
-    @echo ""
-    @echo "Total: $(cat *.md | wc -w) words"
+    @echo "Word count by file:"; @for f in *.md; do if [ -f "$f" ]; then echo "  $f: $(wc -w < "$f") words"; fi; done; echo ""; echo "Total: $(cat *.md | wc -w) words"
 
 # Line count
 lines:
-    @echo "Line count by file:"
-    @for f in *.md; do
-      if [ -f "$f" ]; then
-        count=$(wc -l < "$f")
-        echo "  $f: $count lines"
-      fi
-    done
+    @echo "Line count by file:"; @for f in *.md; do if [ -f "$f" ]; then echo "  $f: $(wc -l < "$f") lines"; fi; done
 
 # =====================================================================
 # WEBSITE
