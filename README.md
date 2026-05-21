@@ -89,16 +89,21 @@ The split is intentional: the execution layer is auditable; the intelligence is 
 
 ### 1. Run the alert simulator
 
+The simulator is pure bash — no Python or other runtime required. Just
+`bash`, `openssl`, and `curl` (all standard on macOS and Linux).
+
 ```bash
 git clone https://github.com/vyrox-security/vyrox-simulator
 cd vyrox-simulator
-pip install -r requirements.txt
 
 # Mimikatz credential dump — should classify as CRITICAL
-python simulate_crowdstrike_alert.py --scenario mimikatz
+./simulate.sh mimikatz
 
 # Benign sysadmin activity — should classify as BENIGN, no Discord message
-python simulate_crowdstrike_alert.py --scenario benign
+./simulate.sh benign
+
+# See the signed payload without POSTing anywhere (offline preview)
+./simulate.sh mimikatz --dry-run
 ```
 
 ### 2. Read the proxy code

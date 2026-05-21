@@ -182,9 +182,11 @@ All webhooks normalize to this internal schema:
 
 ## Testing
 
-Use the simulator to generate test payloads:
+Use the simulator to generate test payloads. The simulator is pure
+bash (no Python runtime required):
 ```bash
-python vyrox-simulator/simulate_crowdstrike_alert.py --scenario mimikatz
-python vyrox-simulator/simulate_crowdstrike_alert.py --scenario lateral
-python vyrox-simulator/simulate_crowdstrike_alert.py --scenario benign
+cd vyrox-simulator
+./simulate.sh mimikatz
+./simulate.sh lateral --all-stages
+./simulate.sh benign
 ```
