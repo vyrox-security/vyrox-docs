@@ -1,6 +1,10 @@
 # Vyrox Security
 
-# Your AI Security Copilot
+> AI security copilot for teams without a dedicated SOC. Ingests EDR alerts,
+> triages them through a deterministic heuristics engine and an LLM fallback,
+> and routes the verdicts that matter to a human approver in Discord. Every
+> containment action runs through a small Rust proxy that the customer can
+> read and audit.
 
 [![License: MIT (proxy)](https://img.shields.io/badge/proxy-MIT-green?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy/blob/main/LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange?style=flat-square)](#status)

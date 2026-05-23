@@ -59,7 +59,12 @@ done
 # Cloudflare Pages does not ship mdbook. We fetch the pinned release
 # tarball if the binary is not on PATH. Pinning the version means a
 # release-channel change on the upstream cannot break this build.
-MDBOOK_VERSION="${MDBOOK_VERSION:-v0.4.40}"
+# v0.5.3 is the release we test against locally. The CSS overrides
+# in `theme/css/` target selectors that exist in mdBook 0.5.x
+# (`#mdbook-sidebar`, `#mdbook-sidebar-toggle-anchor`, etc). v0.4.x
+# uses different chrome IDs and our overrides do not apply there,
+# which broke the sidebar layout on the first Cloudflare deploy.
+MDBOOK_VERSION="${MDBOOK_VERSION:-v0.5.3}"
 LOCAL_MDBOOK_BIN="$REPO_ROOT/.mdbook-bin/mdbook"
 
 mdbook_cmd() {
