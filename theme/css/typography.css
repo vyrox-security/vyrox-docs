@@ -1,21 +1,13 @@
 /*
- * Vyrox typography for the documentation site.
+ * Vyrox docs typography.
  *
- * Three families per the brand spec in product.md:
+ * Visual target is the Rust book: clean reference-doc feel, sans-serif
+ * body and headings, generous line-height, content centered in a
+ * readable column. We use Geist for body, Fraunces only for the page
+ * H1 as a tasteful brand accent, and JetBrains Mono for all code.
  *
- *   - Fraunces  (display / headings)  Variable serif, optical sizing
- *   - Geist     (body)                Highly readable sans-serif
- *   - JetBrains Mono (code, labels)   Industry-standard programming font
- *
- * All three are loaded via Google Fonts in the document head. The
- * fallback chain prefers system serifs / sans for the unlikely case
- * the Google Fonts CDN is blocked, and we deliberately avoid
- * `system-ui` and `-apple-system` as the primary face because the
- * brand spec rules them out and they produce inconsistent rendering
- * across platforms.
- *
- * Type scale targets readable line lengths and a generous line-height
- * so the dense technical prose stays approachable.
+ * Font scale is rem-based on top of mdBook's 62.5% root, so 1.6rem
+ * resolves to ~16px on default browser settings.
  */
 
 /* Body */
@@ -23,180 +15,249 @@ html,
 body,
 .content {
     font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
-    font-size: 16.5px;
-    line-height: 1.65;
-    font-weight: 400;
-    letter-spacing: 0.001em;
-    /* `optical-sizing: auto` makes variable fonts render slightly
-       crisper at body sizes. Free perf win where supported. */
+    font-feature-settings: "kern", "liga", "calt";
     font-optical-sizing: auto;
 }
 
-/* Display headings */
-.content h1,
+body {
+    font-size: 1.6rem;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+.content {
+    line-height: 1.6;
+}
+
+/* Headings.
+ *
+ * Geist for h2 and below so the page reads as a reference doc, not a
+ * magazine. H1 keeps Fraunces because the brand spec calls for the
+ * variable serif and the H1 is the one place a touch of identity does
+ * not fight the prose. */
+.content h1 {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: 2.8rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-block-start: 0.4em;
+    margin-block-end: 0.6em;
+    font-variation-settings: "opsz" 96, "SOFT" 0, "WONK" 0;
+}
+
 .content h2,
 .content h3,
 .content h4,
 .content h5,
-.content h6,
-.menu-title {
-    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+.content h6 {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
     font-weight: 600;
     letter-spacing: -0.005em;
-    line-height: 1.18;
-    font-optical-sizing: auto;
-    /* Variable-axis tweaks. `opsz 28` keeps the body-level headings
-       legible; the hero (h1) bumps to a larger optical size below. */
-    font-variation-settings: "opsz" 28, "SOFT" 0, "WONK" 0;
+    line-height: 1.3;
 }
 
-.content h1 {
-    font-size: 2.4rem;
-    font-weight: 700;
-    margin-top: 1.2rem;
-    margin-bottom: 1.6rem;
-    font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
-}
 .content h2 {
-    font-size: 1.7rem;
-    margin-top: 2.4rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--quote-border);
+    font-size: 2rem;
+    margin-block-start: 2.2em;
+    margin-block-end: 0.6em;
 }
 .content h3 {
-    font-size: 1.3rem;
-    margin-top: 1.8rem;
-    margin-bottom: 0.6rem;
+    font-size: 1.7rem;
+    margin-block-start: 1.8em;
+    margin-block-end: 0.5em;
 }
 .content h4 {
+    font-size: 1.4rem;
+    margin-block-start: 1.6em;
+    margin-block-end: 0.4em;
+}
+.content h5 {
+    font-size: 1.2rem;
+    margin-block-start: 1.4em;
+}
+.content h6 {
     font-size: 1.1rem;
-    margin-top: 1.4rem;
-    margin-bottom: 0.4rem;
-    font-weight: 600;
+    margin-block-start: 1.2em;
+    color: var(--searchresults-header-fg);
 }
 
 /* Paragraphs and lists */
 .content p,
 .content li {
-    font-size: 1rem;
-    max-width: 72ch;     /* readable line length */
+    font-size: 1.6rem;
 }
 .content p {
-    margin-top: 0.6rem;
-    margin-bottom: 1rem;
-}
-.content li {
-    margin-bottom: 0.35rem;
+    margin-block-start: 0;
+    margin-block-end: 1em;
 }
 .content ul,
 .content ol {
-    margin-top: 0.6rem;
-    margin-bottom: 1rem;
+    padding-inline-start: 1.8em;
+    margin-block-end: 1em;
+}
+.content li {
+    margin-block-end: 0.35em;
+}
+.content li > p {
+    margin-block-end: 0.5em;
 }
 
-/* Blockquotes — used for the project tagline and inline call-outs */
+/* Links. Underline on hover keeps the page calm while still feeling
+   responsive. */
+.content a:link,
+.content a:visited {
+    text-decoration: none;
+}
+.content a:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Blockquotes. Plain background tint, thin border, no italics. */
 .content blockquote {
-    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
-    font-style: normal;
-    font-weight: 400;
-    border-left: 3px solid var(--quote-border);
     background: var(--quote-bg);
-    padding: 0.75rem 1.1rem;
-    margin: 1.2rem 0;
+    border-inline-start: 3px solid var(--quote-border);
+    padding: 0.6em 1em;
+    margin: 1.2em 0;
     color: var(--fg);
-    opacity: 0.92;
 }
 .content blockquote p {
-    margin: 0.2rem 0;
+    margin: 0.2em 0;
 }
 
-/* Code */
+/* Code. JetBrains Mono everywhere, ligatures off so == reads as = =. */
 code,
 pre,
 pre code,
-.hljs {
+.hljs,
+.menu-title code {
     font-family: "JetBrains Mono", "SF Mono", "Cascadia Code",
-        "Roboto Mono", Consolas, "Liberation Mono", monospace;
-    font-size: 0.92rem;
-    font-feature-settings: "liga" 0, "calt" 0;  /* disable ligatures so == reads as = = */
+        "Source Code Pro", Consolas, "Liberation Mono", monospace;
+    font-feature-settings: "liga" 0, "calt" 0;
     font-variant-ligatures: none;
 }
+
 pre {
-    padding: 0.9rem 1rem;
-    border-radius: 2px;
+    padding: 0.85em 1em;
+    border-radius: 4px;
     overflow-x: auto;
     line-height: 1.55;
+    font-size: 1.4rem;
 }
 
-/* Tables — readable on dense API reference rows */
+/* Inline code chip. Subtle border so it reads as an identifier
+   without becoming a coloured tag. */
+.content :not(pre) > code {
+    color: var(--inline-code-color);
+    background: var(--quote-bg);
+    border: 1px solid var(--quote-border);
+    border-radius: 3px;
+    padding: 0 0.3em;
+    font-size: 0.88em;
+}
+
+/* Tables. Used heavily in the API reference. */
 .content table {
-    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
-    font-size: 0.95rem;
+    font-size: 1.5rem;
     border-collapse: collapse;
-    margin: 1.2rem 0;
+    margin: 1.4em 0;
     width: 100%;
 }
 .content table th {
     font-weight: 600;
     text-align: left;
     background: var(--table-header-bg);
-    padding: 0.55rem 0.7rem;
-    border-bottom: 1px solid var(--table-border-color);
+    padding: 0.5em 0.7em;
+    border: 1px solid var(--table-border-color);
 }
 .content table td {
-    padding: 0.5rem 0.7rem;
-    border-bottom: 1px solid var(--table-border-color);
+    padding: 0.5em 0.7em;
+    border: 1px solid var(--table-border-color);
     vertical-align: top;
 }
 .content table tr:nth-child(2n) td {
     background: var(--table-alternate-bg);
 }
 
-/* Sidebar nav and menu titles */
+/* Horizontal rule. Lighter than mdBook's default so it does not slice
+   the page. */
+.content hr {
+    border: 0;
+    border-top: 1px solid var(--quote-border);
+    margin: 2.2em 0;
+}
+
+/* Sidebar. Geist with a calm 1.4 line-height. */
 .sidebar,
 .sidebar .chapter,
 .menu-title {
     font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
 }
 .sidebar .chapter {
-    font-size: 0.96rem;
-    line-height: 1.4;
+    font-size: 1.4rem;
+    line-height: 1.45;
+}
+.sidebar .chapter li.chapter-item {
+    padding: 0.18em 0;
 }
 .menu-title {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
     font-weight: 600;
-    letter-spacing: -0.005em;
+    font-size: 1.9rem;
+    letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 96;
 }
 
-/* Top nav (part titles defined by `# Part title` in SUMMARY.md) */
+/* SUMMARY part titles (`# Heading` lines in SUMMARY.md) read as
+   small uppercase labels above each section so the nav stays
+   scannable. */
 .chapter > .part-title {
     font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
-    font-size: 0.75rem;
+    font-size: 1.05rem;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     color: var(--searchresults-header-fg);
-    margin-top: 1.25rem;
-    margin-bottom: 0.4rem;
+    margin-block-start: 1.4em;
+    margin-block-end: 0.4em;
+    padding-inline-start: 0.6em;
 }
 
-/* Search results */
-.searchbar-outer input,
-#searchbar {
+/* Search */
+#searchbar,
+.searchbar-outer input {
     font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
-    font-size: 0.95rem;
+    font-size: 1.45rem;
 }
 
-/* Footer/print niceties */
+/* Active sidebar item gets a thin ember rule and the accent colour
+   without changing background. Reads as a calm pointer instead of a
+   highlight bar. */
+.chapter li.chapter-item.expanded > a.active,
+.chapter li.chapter-item > a.active {
+    color: var(--sidebar-active);
+    font-weight: 500;
+    border-inline-start: 2px solid var(--sidebar-active);
+    margin-inline-start: -2px;
+    padding-inline-start: 8px;
+}
+
+/* Print niceties */
 @media print {
     html, body { background: white; color: black; }
+    .content { max-width: 100%; }
     pre, code { font-size: 9pt; }
+    .content a:link,
+    .content a:visited { color: black; }
 }
 
-/* Smaller screens. Keep readable line length but tighten the scale. */
+/* Small screens. Tighten the scale, drop max-width so the column
+   fills the viewport. */
 @media (max-width: 640px) {
-    html, body, .content { font-size: 15.5px; line-height: 1.6; }
-    .content h1 { font-size: 1.95rem; }
-    .content h2 { font-size: 1.45rem; }
-    .content h3 { font-size: 1.18rem; }
-    .content p, .content li { max-width: none; }
+    body { font-size: 1.55rem; line-height: 1.55; }
+    .content h1 { font-size: 2.2rem; }
+    .content h2 { font-size: 1.7rem; }
+    .content h3 { font-size: 1.45rem; }
+    .content h4 { font-size: 1.25rem; }
+    .content table { font-size: 1.35rem; }
 }
