@@ -152,4 +152,3 @@ public GitHub issues.
 
 ---
 
-*Vyrox Security, Inc. — hello@vyrox.dev*
