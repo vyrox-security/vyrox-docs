@@ -168,7 +168,7 @@ intact.
 
 ```python
 #!/usr/bin/env python3
-"""Audit chain verifier — reads vyrox audit log directory, checks chain."""
+"""Audit chain verifier. Reads a vyrox audit log directory and checks the chain."""
 import hashlib
 import json
 import sys

@@ -1,4 +1,4 @@
-# Vyrox MVP Setup Guide — Design Partner Demo
+# Vyrox MVP Setup Guide (Design Partner Demo)
 
 > How to get the Vyrox prototype running in a B2B prospect environment for demonstration.
 
@@ -84,7 +84,7 @@ EDR (CrowdStrike/SentinelOne)
 
 ---
 
-## Quick Start (Simulator Only — No Real EDR Needed)
+## Quick Start (Simulator Only, no real EDR needed)
 
 This is the fastest path to a working demo without real EDR credentials.
 
@@ -135,7 +135,7 @@ cargo run
 cd ~/vyrox-workspace/vyrox-simulator
 
 # Configure your HMAC secret via env (matches VYROX_HMAC_SECRET in the
-# ingestion service). The simulator is pure bash — no edits to source.
+# ingestion service). The simulator is pure bash; no edits to source.
 export VYROX_HMAC_SECRET="<paste-the-64-hex-string-from-your-.env>"
 export VYROX_URL="http://localhost:8001/webhook"
 export VYROX_TENANT_ID="default-tenant"
@@ -350,7 +350,7 @@ Copy an existing scenario as your template, then edit the JSON body:
 ```bash
 # scenarios/custom_attack.sh
 #!/usr/bin/env bash
-# Scenario: Custom Attack — example template
+# Scenario: Custom Attack (example template)
 
 SCENARIO_NAME="custom_attack"
 SCENARIO_SOURCE="crowdstrike"
@@ -492,7 +492,7 @@ sqlite3 vyrox.db "SELECT severity, confidence, reasoning FROM alerts;"
 |------|---------|
 | `vyrox-simulator/scenarios/mimikatz.sh` | Realistic credential-dumping alert |
 | `vyrox-simulator/scenarios/lateral_stage1.sh` | Lateral movement (stage 1 of 8) |
-| `vyrox-simulator/simulate.sh` | Dispatcher — signs and POSTs every scenario |
+| `vyrox-simulator/simulate.sh` | Dispatcher; signs and POSTs every scenario |
 | `vyrox/worker/triage.py` | Two-stage triage logic |
 | `vyrox/shared/crypto.py` | HMAC signature verification |
 | `vyrox-proxy/src/main.rs` | Containment proxy endpoint |
@@ -517,7 +517,7 @@ With real EDR credentials, the system handles:
 
 ## Security Notes for Demo
 
-1. **DRY_RUN=true** is default — no actual containment happens
+1. **DRY_RUN=true** is default; no actual containment happens
 2. HMAC verification on all endpoints
 3. SHA-256 audit chain for compliance
 4. Tenant isolation via Redis keys
