@@ -134,12 +134,15 @@ cargo run
 # Terminal 6
 cd ~/vyrox-workspace/vyrox-simulator
 
-# Edit simulate.py to use your HMAC secret
-# Default in .env: VYROX_HMAC_SECRET=46dd36aa38f9f6e8aabb771079daba3f0b409c965ec8fe7863a6c7c2e5e2893c
+# Configure your HMAC secret via env (matches VYROX_HMAC_SECRET in the
+# ingestion service). The simulator is pure bash — no edits to source.
+export VYROX_HMAC_SECRET="<paste-the-64-hex-string-from-your-.env>"
+export VYROX_URL="http://localhost:8001/webhook"
+export VYROX_TENANT_ID="default-tenant"
 
 # Run a scenario
-python scripts/simulate.py mimikatz --url http://localhost:8001/webhook
-python scripts/simulate.py lateral --url http://localhost:8001/webhook
+./simulate.sh mimikatz
+./simulate.sh lateral --all-stages
 ```
 
 **Expected behavior:**
@@ -281,8 +284,10 @@ curl http://localhost:3000/health
 ```bash
 cd ~/vyrox-workspace/vyrox-simulator
 
-# Sign the payload with your HMAC secret
-python scripts/simulate.py mimikatz --url http://localhost:8001/webhook
+# The simulator signs the payload with $VYROX_HMAC_SECRET (set above)
+# and POSTs to $VYROX_URL. Add --dry-run to skip the POST and just
+# print the signed body.
+./simulate.sh mimikatz
 ```
 
 **Expected logs:**
@@ -336,35 +341,52 @@ The simulator generates realistic EDR alerts using Lua scenarios:
 
 ### Creating Custom Scenarios
 
-Create a `.lua` file in `vyrox-simulator/scenarios/`:
+Each scenario is a self-contained bash script in `vyrox-simulator/scenarios/`
+that defines a `build_payload()` function. The dispatcher (`simulate.sh`)
+sources the script, calls `build_payload`, signs the result, and POSTs it.
 
-```lua
--- scenarios/custom_attack.lua
-return {
-    source = "crowdstrike",
-    name = "Custom Attack",
-    payload = {
-        detect_id = "custom-001",
-        timestamp = os.time(),
-        sensor = {
-            hostname = "WORKSTATION-DEMO"
-        },
-        process = {
-            file_name = "malicious.exe",
-            command_line = "malicious.exe --stealth-mode",
-            user_name = "DOMAIN\\admin",
-            sha256 = "abc123def456..."
-        },
-        tactic = "T1059",  -- PowerShell
-        technique = "T1059.001",
-        severity = "high"
-    }
+Copy an existing scenario as your template, then edit the JSON body:
+
+```bash
+# scenarios/custom_attack.sh
+#!/usr/bin/env bash
+# Scenario: Custom Attack — example template
+
+SCENARIO_NAME="custom_attack"
+SCENARIO_SOURCE="crowdstrike"
+SCENARIO_SEVERITY="HIGH"
+SCENARIO_TACTIC="Execution"
+SCENARIO_TECHNIQUE="T1059.001"
+
+TIMESTAMP=$(date +%s)
+DETECT_ID="custom-${TIMESTAMP}"
+
+build_payload() {
+    local tenant_id="${1:-default-tenant}"
+    cat <<EOF
+{
+    "detect_id": "${DETECT_ID}",
+    "customer_id": "${tenant_id}",
+    "timestamp": ${TIMESTAMP},
+    "sensor": { "hostname": "WORKSTATION-DEMO" },
+    "process": {
+        "user_name": "DOMAIN\\\\admin",
+        "file_name": "malicious.exe",
+        "command_line": "malicious.exe --stealth-mode",
+        "sha256": "abc123def456..."
+    },
+    "tactic": "${SCENARIO_TACTIC}",
+    "technique": "${SCENARIO_TECHNIQUE}",
+    "severity": "${SCENARIO_SEVERITY}"
+}
+EOF
 }
 ```
 
-Run with:
+Make it executable, then run:
 ```bash
-python scripts/simulate.py custom_attack --url http://localhost:8001/webhook
+chmod +x scenarios/custom_attack.sh
+./simulate.sh custom_attack
 ```
 
 ---
@@ -429,8 +451,8 @@ redis-cli FLUSHDB
 echo "=== Database before ==="
 sqlite3 vyrox.db "SELECT COUNT(*) FROM alerts;"
 
-# Step 2: Fire alert
-python scripts/simulate.py mimikatz --url http://localhost:8001/webhook
+# Step 2: Fire alert (from the vyrox-simulator directory)
+./simulate.sh mimikatz
 
 # Step 3: Wait for processing
 sleep 3
@@ -468,8 +490,9 @@ sqlite3 vyrox.db "SELECT severity, confidence, reasoning FROM alerts;"
 
 | File | Purpose |
 |------|---------|
-| `vyrox-simulator/scenarios/mimikatz.lua` | Realistic credential dumping alert |
-| `vyrox-simulator/scenarios/lateral.lua` | Lateral movement alert |
+| `vyrox-simulator/scenarios/mimikatz.sh` | Realistic credential-dumping alert |
+| `vyrox-simulator/scenarios/lateral_stage1.sh` | Lateral movement (stage 1 of 8) |
+| `vyrox-simulator/simulate.sh` | Dispatcher — signs and POSTs every scenario |
 | `vyrox/worker/triage.py` | Two-stage triage logic |
 | `vyrox/shared/crypto.py` | HMAC signature verification |
 | `vyrox-proxy/src/main.rs` | Containment proxy endpoint |

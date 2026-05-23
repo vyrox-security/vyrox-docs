@@ -1,335 +1,436 @@
-# Vyrox — Alert Signal Quality for IT Managers
+# Architecture
 
-> **Document:** `vyrox-docs/ARCHITECTURE.md`
-> **Version:** 2.0.0
-> **Last Updated:** 2026-05-15
-> **Visibility:** Public
->
-> **What this is:** For IT managers at 100-500 person companies with CrowdStrike or SentinelOne who are the only ones triaging alerts at 11pm.
+This document is the engineering reference for the Vyrox platform. It is
+written for the person who is about to read or modify the code, or who is
+evaluating Vyrox for a regulated workload and needs to know exactly what
+the system does. It does not describe what the product will become. It
+describes what runs in CI today.
 
----
+If you are looking for setup steps, see [`QUICKSTART.md`](QUICKSTART.md).
+If you are looking for the threat model, see [`THREAT_MODEL.md`](THREAT_MODEL.md).
+If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
 
-## Table of Contents
-
-1. [What Vyrox Is](#1-what-vyrox-is)
-1.5. [Competitive Moats (MVP Priority)](#15-competitive-moats-mvp-priority)
-2. [The Problem](#2-the-problem)
-3. [The Pipeline](#3-the-pipeline)
-4. [Component Overview](#4-component-overview)
-5. [The Open-Core Model](#5-the-open-core-model)
-6. [Security Design](#6-security-design)
-7. [SLA & Operational Commitments](#7-sla--operational-commitments)
-8. [Design Decisions](#8-design-decisions)
-9. [Integrating with Vyrox](#9-integrating-with-vyrox)
-
----
-
-## 1. What Vyrox Is
-
-**The value proposition:** Automated alert triage that tells you what to do about each alert, not just that something happened.
-
-**Who it's for:** IT managers at companies with 100-500 employees who have CrowdStrike or SentinelOne but are the only ones triaging alerts — at 11pm, on weekends, with a spreadsheet and anxiety.
-
-**What we do:**
-- Auto-triage every alert from your EDR
-- Surface containment-ready verdicts in Discord
-- Your team approves or denies in under 2 minutes
-- We handle everything between
-
-**The moat:** We built the triage logic your EDR vendor should have built. Alert signal quality — the ability to say "this is actually malicious" vs "this is a scheduled task" — is domain knowledge, not AI magic.
-
-**Setup time:** 15 minutes. No log management, no query language, no data lake.
-
----
-
-## 1.5 Competitive Moats (MVP Priority)
-
-> **Build these in v0.1.0.** These are the defensibility layer that makes Vyrox hard to replicate.
-
-### Moat 1: Data Network Effect
-
-**Every alert processed makes triage better for everyone.**
-
-- Heuristics engine improves with every alert across all customers
-- LLM prompts get better from collective signal
-- False positive patterns surface across the customer base
-- Benign baseline shifts as more companies contribute
-
-**The pitch:** "20 companies triaging alerts together. Your CrowdStrike sees Mimikatz on Tuesday, we auto-classified it by Wednesday — across all 20 tenants."
-
-**MVP implementation:**
-- Aggregate anonymized pattern matching stats in dashboard ("Your alert matched patterns seen in 12 other Vyrox customers this week")
-- Document the flywheel explicitly in sales materials
-- Case studies showing collective learning ("40% fewer false positives because we process 50K alerts/week across customer base")
-
----
-
-### Moat 2: Workflow Lock-in
-
-**After 90 days, switching means losing 500 triage decisions of institutional memory.**
-
-- Analysts build muscle memory on approve/deny/investigate in Discord
-- Team-specific verdict routing becomes embedded
-- Alert history and decisions become institutional knowledge
-- Discord channel organization reflects team structure
-
-**The pitch:** "After 90 days of use, your team has 500 triage decisions logged. Switching means starting from zero."
-
-**MVP implementation:**
-- Triage history accessible in Discord — show analyst accept/deny patterns over time
-- Make audit log ownership explicit — switching means losing it
-- Store per-customer routing rules (some teams always approve "suspicious PowerShell", others always deny)
-
----
-
-## 2. The Problem
-
-Every company with CrowdStrike or SentinelOne faces the same gap: their EDR detects everything, but no one triages it at night.
-
-- **500+ alerts a week** hit a 200-person company's EDR
-- **The IT manager is the only analyst** — nights, weekends, holidays
-- **Real attacks happen at 2am** when no one's watching
-- **False positives burn trust** — after the 50th "scheduled task" alert, everything gets ignored
-
-The EDR vendors (CrowdStrike, SentinelOne) detect well. They don't triage well. That's the gap.
-
-**SIEMs don't solve this** — Splunk tells you something happened, requires query language expertise, and doesn't tell you what to do. You still have to interpret and act.
-
-**MSSPs don't solve this** — $500K/year for human analysts who work business hours. Still gaps at night. Still slow response times.
-
-**Vyrox solves this** — We sit between your EDR and your team. We triage every alert. We tell you what's actually malicious. Your team approves containment if needed. You sleep at night.
-
----
-
-## 3. The Pipeline
+## Pipeline at a glance
 
 ```
-[Data Sources]
-    │          │           │
-    ▼          ▼           ▼
-[EDR]    [Vuln Scanners]  [Cloud APIs]
-(CrowdStrike/SentinelOne/Defender)  (Planned: Tenable/Rapid7)  (Planned: AWS/Azure AD)
-
-    │              │              │
-    └──────────────┼──────────────┘
-                  ▼
-       ┌──────────────────────┐
-       │    Ingestion Layer   │  HMAC-verified webhooks + API integrations
-       │    POST /webhook     │  Normalizes vendor schemas
-       └──────────┬───────────┘
-                  │
-                  ▼
-       ┌──────────────────────┐
-       │     Message Queue    │  Decouples ingestion from processing
-       └──────────┬───────────┘
-                  │
-                  ▼
-       ┌──────────────────────┐
-       │      AI Worker       │
-       │  ┌────────────────┐   │
-       │  │   Stage 1     │   │  Deterministic triage — <5ms, free, explainable
-       │  │   Heuristics  │   │  Covers 80%+ of alert volume
-       │  └──────┬─────────┘   │
-       │          │ if ambiguous│
-       │  ┌──────▼─────────┐   │
-       │  │   Stage 2     │   │  LLM triage for ambiguous cases only
-       │  │   LLM Triage  │   │  Structured verdict + one-sentence reasoning
-       │  └──────┬─────────┘   │
-       └─────────┼─────────────┘
-                 ▼
-       ┌──────────────────────┐
-       │   VERDICT ENGINE    │  CRITICAL | HIGH | MEDIUM | LOW | BENIGN
-       └──────────┬───────────┘
-                 │
-    ┌────────────┼────────────┐
-    ▼            ▼            ▼
-[AUTOMATED]  [ESCALATE]   [REPORT]
-   RESPONSE    TO HUMAN     ENGINE
-   (Playbooks) (Discord)  (Dashboard, Weekly Briefings)
+   EDR vendors                                   Vyrox platform
+                                                                                                   
+  CrowdStrike Falcon  ─┐                                                                           
+  SentinelOne          ├─▶  POST /webhook/{vendor}  ─▶  Ingestion (FastAPI)                        
+  Defender Graph       │      HMAC or bearer auth          │                                       
+  Generic JSON         ─┘      per-tenant secret           ▼                                       
+                                                  NormalizedAlert  ─▶ Redis  LPUSH/RPOP            
+                                                                          │   vyrox:alerts:{tid}   
+                                                                          ▼                        
+                                              Worker (asyncio)                                     
+                                                                                                   
+                                              1. Cache lookup     (24h TTL by alert fingerprint)   
+                                              2. Heuristics       (Noisy OR, <5ms)                 
+                                                                  ├─ confidence ≥ 0.75 ▶ accept  
+                                                                  ├─ confidence ≤ 0.25 ▶ BENIGN  
+                                                                  └─ otherwise ▶ LLM             
+                                              3. LLM fallback     (primary + 2 fallback models)    
+                                                                  + Pydantic schema validation     
+                                                                  + per-tenant daily token budget   
+                                              4. Persist          (SQLite, tenant-scoped tables)   
+                                              5. Notify           (signed HTTP to bot)             
+                                                                                                   
+                                              Discord bot (FastAPI)                                
+                                              ├─ /interactions  (Ed25519 verified)                 
+                                              ├─ /webhook       (HMAC verified)                    
+                                              └─ approval flow  ▶ Rust proxy                       
+                                                                                                   
+                                              Rust proxy                                           
+                                              ├─ HMAC verify       (constant time)                 
+                                              ├─ replay window     (±30s)                          
+                                              ├─ nonce dedup       (DashMap, 10min retention)      
+                                              ├─ audit append      (hash-chained JSONL)            
+                                              └─ EDR API call      (or DRY_RUN short-circuit)      
 ```
 
-### Three-Layer Operations Model
+All five services are independent processes. They communicate over HTTP
+and Redis only. There is no shared in-process state across services. The
+SQLite database is shared between the worker and the Discord bot in the
+current pilot deployment. A future Postgres migration is tracked in
+`todo.md` (private) before tenant count reaches twenty five.
 
-**Layer 1 — Always-On (Autonomous, 24/7):**
-- Continuous threat monitoring
-- Vulnerability surface mapping
-- Automated response playbooks
-- Compliance evidence collection
+## Components
 
-**Layer 2 — Assisted (AI + Human):**
-- Complex investigation
-- Incident response orchestration
-- Security posture recommendations
-- Weekly AI-generated security briefings
+| Component | Language | Process | What it owns |
+|---|---|---|---|
+| Ingestion | Python, FastAPI | `uvicorn ingestion.main:app` | Webhook auth, vendor payload normalisation, Redis enqueue |
+| Worker | Python, asyncio | `python -m worker.main` | Triage pipeline, persistence, Discord notification |
+| Discord bot | Python, FastAPI | `uvicorn discord_bot.main:app` | Interaction handling, approval flow, signing toward the proxy |
+| Containment proxy | Rust, Axum | `vyrox-proxy` | HMAC verify, replay window, nonce dedup, audit, EDR API call |
+| Heuristics engine | Python | imported by the worker | Pattern matching, Noisy OR aggregation |
 
-**Layer 3 — Escalated (Human Expert):**
-- Critical incidents
-- Strategic security advisory
-- Board-level reporting
+The heuristics engine is private. The shape of its API (`HeuristicsEngine.score(alert: dict) -> HeuristicResult`) is documented here because callers depend on it. The pattern weights and the MITRE technique mapping are not.
 
-### Stage 1 — Heuristics Engine
+## Critical rules
 
-The first triage stage is deterministic. It runs a set of pattern-based rules derived from real-world red team TTPs and public threat intelligence. No LLM dependency. Verdict in under 5ms.
+These six rules are enforced by tests and reviewed in every PR. Violating
+one is a blocking issue, not a stylistic choice.
 
-Alerts that score above a high-confidence threshold are classified immediately. Alerts that score below a low-confidence threshold are classified as benign and closed. Only the ambiguous middle band proceeds to Stage 2.
+### Rule 1: Tenant isolation
 
-This design keeps the LLM reserved for cases where pattern matching alone is insufficient — keeping operating costs near zero at early scale and keeping every high-confidence decision explainable without reference to a model.
+Every database query carries a `tenant_id` filter. Every Redis key is
+namespaced `vyrox:alerts:{tenant_id}`. There is no shared bucket and no
+fallback tenant.
 
-### Stage 2 — LLM Triage
+The previous default-tenant fallback was removed on 2026-05-21 after the
+first audit caught it. The replacement contract: if a payload arrives
+without the vendor's tenant identifier (`customer_id`, `accountId`,
+`tenantId`), the ingestion route returns HTTP 400 and the EDR retries.
+The function is `resolve_tenant_id` in `ingestion/main.py`. It raises
+`MissingTenantIdentifier` on a missing or empty value.
 
-Ambiguous alerts are passed to a small language model with a structured system prompt focused on security triage. The model returns a verdict, a confidence score, and a one-sentence reasoning string. The reasoning is surfaced in the Discord embed so your analyst can evaluate the AI's logic before approving any action.
+The schema invariant is checked at boot. `shared/db.py:_assert_tenant_id_present`
+walks every table in `_TENANT_SCOPED_TABLES` (`alerts`, `actions`,
+`verdict_cache`, `token_usage`) and refuses to start the service if any
+of them is missing the `tenant_id` column. The check uses `PRAGMA
+table_info`, runs once at startup, and raises `SchemaIntegrityError`
+loudly enough that the deploy fails.
 
-The LLM produces a recommendation. A human approves or denies it. The LLM never directly triggers execution.
+### Rule 2: Audit before response
 
-### Human-in-the-Loop
+Every state-changing operation writes an audit entry before the response
+goes back to the caller. The audit log is append-only JSONL. Each entry
+carries `previous_hash` (the SHA-256 of the prior entry) and `hash` (the
+SHA-256 of `previous_hash || canonical_json(entry)`). The first entry of
+the very first log file links to a sentinel genesis hash of sixty four
+zeros.
 
-Every CRITICAL and HIGH verdict generates an interactive Discord embed in your designated channel. The analyst sees the alert summary, triage reasoning, MITRE ATT&CK tactic, and the recommended containment action before making any decision.
+The chain survives process restarts. `AuditWriter.__init__` in
+`shared/audit.py` reads the last hash from today's log file before
+accepting the first write. The Rust proxy uses the same approach in
+`audit::ChainState::from_file`. Both implementations agree on the wire
+format. The independent specification is in [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
 
-Three options are always available:
-- **Approve** — sends a signed execution request to the containment proxy
-- **Deny** — closes the alert, logs the decision
-- **Investigate** — opens the full raw alert payload for deeper review before deciding
+Audit writes are durable. `_sync_write` in `shared/audit.py` flushes and
+`os.fsync` after every entry. The Rust side does `flush` followed by
+`sync_data`. A power cut between the write and the OS writeback does
+not lose entries.
 
-LOW severity alerts above a configurable confidence threshold can be set to auto-approve. This is off by default and requires explicit opt-in per tenant.
+### Rule 3: HMAC before processing
 
----
+Every webhook payload is verified before any parser touches its bytes.
+The verification uses `hmac.compare_digest` on the Python side and the
+`subtle::ConstantTimeEq` trait on the Rust side. Both run in time
+proportional to the MAC length, not to where the first byte mismatch
+appears.
 
-## 4. Component Overview
+The wire format on the Python side: `sign(payload: str, secret: str)`
+returns `f"sha256={hex_digest}"`. The Rust verifier strips the
+`"sha256="` prefix before comparing. The round-trip is locked by
+`tests/test_p0_regressions.py::test_hmac_python_sign_uses_sha256_prefix`.
 
-| Component | Technology | Purpose |
+For requests carrying JSON bodies that travel between Vyrox services
+(the worker calling the bot, the bot calling the proxy), the body is
+serialised with `separators=(",", ":")` and `sort_keys=True`. Without
+that pinning, Python's default `json.dumps` and Rust's `serde_json`
+disagree on whitespace and key order, which produces a different MAC
+on the verifier side and a silent 401.
+
+### Rule 4: No autonomous containment
+
+The LLM cannot trigger a containment action. The heuristics engine
+cannot trigger a containment action. The worker cannot trigger a
+containment action.
+
+The only code path that calls the Rust proxy is the Discord bot's
+approval handler in `discord_bot/handlers/approvals.py`, which runs in
+response to a Discord button click. The button click itself is
+authenticated end to end: Discord signs the interaction with Ed25519,
+the bot verifies the signature against the application's public key in
+`discord_bot/security.py`, the handler then signs an `ActionRequest`
+with the shared HMAC secret, and the proxy verifies that signature
+before doing anything else.
+
+The static invariant is enforced by a test:
+`tests/test_p0_regressions.py::test_worker_triage_never_invokes_proxy`
+greps the worker modules at import time and at source level for any
+reference to `discord_bot.proxy_client.execute_action`. If the worker
+ever imports that symbol, the test fails. The check covers both eager
+imports and lazy imports inside functions.
+
+### Rule 5: DRY_RUN by default
+
+The Rust proxy's `dry_run` flag is `true` by default. Production has to
+opt in to real execution by setting `DRY_RUN=false` in the environment.
+The check happens before the EDR client is even constructed, so
+mis-configuration cannot accidentally call the vendor's API.
+
+```rust
+// vyrox-proxy/src/main.rs
+let response = if state.dry_run {
+    info!(/* ... */, "DRY_RUN: skipping EDR call");
+    ExecuteResponse { status: "dry_run".to_string(), dry_run: true }
+} else {
+    state.edr.dispatch(payload.action_type, &payload.host).await
+};
+```
+
+The audit entry written on a DRY_RUN action looks identical to a real
+action except for the `dry_run: true` field. That is intentional. An
+operator looking at the audit log can tell the difference, and a
+compliance review on the JSONL stream sees the same chain integrity
+either way.
+
+### Rule 6: LLM output never directly executed
+
+The LLM returns a JSON object with five fixed fields: `verdict`,
+`confidence`, `reasoning`, `mitre_techniques`, `suggested_action`. The
+`triage_with_llm` function in `worker/llm.py` runs the parsed object
+through `_parse_triage_json` which checks every field against a fixed
+allow-list (verdict in `{CRITICAL, HIGH, MEDIUM, LOW, BENIGN}`,
+confidence clamped to `[0, 1]`, suggested_action in the action allow-list).
+A response that fails validation produces a conservative MEDIUM verdict
+at 0.5 confidence, not a partial commit.
+
+The validated object never touches `exec`, `eval`, `subprocess`, the
+filesystem, or SQL. It only sets fields on a `TriageResult`. The
+Pydantic model itself is frozen so even a downstream caller cannot
+mutate fields after the fact.
+
+## Multi-tenancy
+
+Tenant isolation is a property of the data layer, not a runtime check
+in business logic.
+
+| Surface | How tenants are separated |
+|---|---|
+| Redis queue | Key namespace: `vyrox:alerts:{tenant_id}` |
+| SQLite tables | Every row carries `tenant_id`; queries filter on it |
+| Discord channels | `DiscordGuild.tenant_id` maps Discord server to tenant |
+| Webhook secrets | Looked up per tenant in `tenant_credentials.webhook_secret_encrypted` |
+| Audit log | Each entry carries `tenant_id`; export endpoints filter server-side |
+| Token budget | Daily ledger keyed on `tenant_id` and date |
+| Verdict cache | Cache key `(tenant_id, fingerprint)` |
+
+The webhook routes resolve the tenant from the vendor payload's own
+identifier field (`customer_id`, `accountId`, `tenantId`), then look up
+that tenant's secret in `tenant_credentials` before verifying the
+signature. A payload that authenticates with the wrong tenant's secret
+fails the HMAC check and returns 401. A payload with no identifier
+returns 400. There is no path where an unmatched payload lands on a
+shared queue.
+
+Cross-tenant access from inside the Discord bot is blocked by
+`discord_bot/main.py:312`. The `custom_id` of every approval button
+embeds the alert's tenant ID. Before calling the approval handler, the
+bot checks that the alert tenant matches the Discord guild's tenant.
+A mismatch returns "This action is not valid for this server" without
+contacting the proxy.
+
+## Two-stage triage
+
+Triage runs in `worker/triage.py::triage`. Five stages, three early
+returns.
+
+```
+                                                              ┌────────────────────────┐
+       NormalizedAlert ──▶ verdict cache ──▶ cache hit ──▶ │ return cached verdict │
+                                  │                            └────────────────────────┘
+                                  │ cache miss
+                                  ▼
+                          heuristics engine
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        ▼                          ▼                          ▼
+  confidence ≥ 0.75         confidence ≤ 0.25       0.25 < confidence < 0.75
+  accept heuristic         return BENIGN               LLM fallback
+       verdict                                          │
+                                                            ▼
+                                                  token budget check
+                                                            │
+                                ┌───────────────────────────┼───────────────────────────┐
+                                ▼                            ▼                            ▼
+                          budget exhausted        primary model            primary 429/5xx
+                          MEDIUM / 0.5            parse + return          ▼
+                                                                              fallback model 1
+                                                                              parse + return
+                                                                                      │
+                                                                                      ▼
+                                                                              fallback model 2
+                                                                              parse + return
+                                                                                      │
+                                                                                      ▼
+                                                                              all rate limited
+                                                                              MEDIUM / 0.5
+```
+
+The two-stage design solves three problems at once. Determinism and
+explainability for the eighty percent of alerts that are obvious. Low
+cost because the LLM is reserved for the ambiguous middle band. A
+conservative default verdict for any failure mode, so the queue never
+jams on a provider outage. The LLM provider is not named in this doc
+because the choice is operational. The model chain is configured in
+environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
+`LLM_FALLBACK_MODEL_2`).
+
+## Approval flow
+
+```
+   Discord button click
+            │
+            ▼
+   bot /interactions   ◀──── Ed25519 verify against settings.discord_public_key
+            │
+            ▼
+   custom_id parse  ──▶ approve / deny / investigate
+            │
+            ▼  (approve only)
+   AlertRecord lookup by alert_id + tenant_id
+            │
+            ▼
+   Idempotency check  ──▶ if status already executed/executing/approved → no-op
+            │
+            ▼
+   Mark alert "executing"
+   Persist ActionRecord "approved"
+   Audit "approve.requested"      ◀──── written before any outbound call
+            │
+            ▼
+   proxy_client.execute_action()
+   body signed with vyrox_hmac_secret (deterministic JSON)
+            │
+            ▼
+   Rust proxy /execute
+   ├─ HMAC verify
+   ├─ replay window check (±30s)
+   ├─ nonce.claim_or_replay(request_id)
+   ├─ audit::append_audit  ◀──── written before EDR call
+   └─ edr.dispatch (or DRY_RUN short-circuit)
+            │
+            ▼
+   ActionRecord.status = "executed" or "dry_run"
+   Alert.status        = "executed"
+   Audit "approve.executed"
+```
+
+The flow's idempotency story has three layers. The bot checks the
+`AlertRecord.status` before generating a request ID, so a double-click
+returns "already approved". The proxy keeps a per-request-ID nonce
+store with ten minute retention, so a network retry replays the cached
+response instead of calling the EDR twice. The audit entry is written
+once per state transition; replayed requests do not double-log.
+
+## Configuration
+
+All configuration is read at startup from environment variables through
+`shared/config.py::Settings`. The settings class uses
+`pydantic_settings` so a missing required field raises a
+`ValidationError` before the service serves traffic.
+
+The full env contract is in [`.env.example`](https://github.com/vyrox-security/vyrox/blob/main/.env.example)
+in the private monorepo. The fields that an OSS contributor needs to
+know about:
+
+| Variable | Component | Purpose |
 |---|---|---|
-| Ingestion webhook | Python, FastAPI | Receives and validates EDR webhook payloads |
-| Message queue | Redis | Decouples ingestion from triage worker |
-| AI worker | Python | Orchestrates the two-stage triage pipeline |
-| Heuristics engine | Python | Stage 1 — deterministic pattern-based triage |
-| LLM client | Python | Stage 2 — LLM triage for ambiguous alerts |
-| Database | PostgreSQL (managed) | Persists alert state, verdicts, action history |
-| Discord bot | Python, py-cord | Human approval interface, per-tenant channels |
-| Containment proxy | Rust (Axum) | Executes approved actions against EDR APIs |
-| Audit log | Append-only JSONL | Permanent record of every action |
-| Tenant dashboard | Next.js | Read-only SOC metrics and alert history per tenant |
+| `VYROX_HMAC_SECRET` | all | Sixty four hex characters. Signs Python ↔ Python and Python ↔ Rust traffic. |
+| `REDIS_URL` | ingestion, worker | `redis://` or `rediss://` URL. The legacy Upstash REST variables are still accepted for backward compatibility but new deployments should set this. |
+| `OPENCODE_ZEN_API_KEY` | worker | LLM provider key. Empty falls back to the legacy `OPENROUTER_API_KEY` during the migration window. |
+| `DISCORD_BOT_TOKEN` | bot | Discord application token. |
+| `DISCORD_PUBLIC_KEY` | bot | Application public key for interaction Ed25519 verification. Empty skips verification (local dev only). |
+| `CROWDSTRIKE_WEBHOOK_SECRET` | ingestion | Vendor-default HMAC secret. Per-tenant secrets stored in `tenant_credentials` override this. |
+| `SENTINELONE_WEBHOOK_SECRET` | ingestion | Vendor-default bearer token. |
+| `DEFENDER_WEBHOOK_SECRET` | ingestion | Defender Graph `clientState` value used as bearer. |
+| `AUDIT_LOG_PATH` | all writers | Directory for daily JSONL files. The hash chain depends on this surviving restart. |
+| `VYROX_PROXY_URL` | bot | Base URL of the Rust proxy. |
+| `DRY_RUN` | proxy | `true` by default. Production opts in to real EDR calls. |
 
-### Public Repositories
+## What is in the private side
 
-| Repository | Purpose |
-|---|---|
-| `vyrox-proxy` | Containment proxy — MIT licensed, fully auditable |
-| `vyrox-docs` | Architecture, API reference, security whitepaper |
-| `vyrox-landing` | Marketing site |
-| `vyrox-simulator` | Alert simulation scripts for integration testing and demos |
-| `.github` | Organisation profile, security policy, responsible disclosure |
+Reading the public docs without seeing the private code is intentional.
+The boundary makes contribution clear.
 
-### Private Repositories
+The private monorepo holds the implementation of the pipeline above.
+File names mirror the layout described here (`ingestion/`, `worker/`,
+`discord_bot/`, `shared/`, `playbook/`, `migrations/`, `tests/`). The
+Python tests covering the public contracts have public-safe names
+(`test_p0_regressions.py`, `test_p05_blockers.py`). Anyone with access
+can map a private fix to a public contract in seconds.
 
-The triage intelligence, multi-tenant infrastructure, detection patterns, red team playbooks, and customer data are maintained in private repositories. The open-core model is intentional: the execution layer that touches your endpoints is public and auditable. The detection intelligence that makes triage decisions is proprietary — that is the operational moat that lets a small team operate at the scale of a 50-person MSSP.
+The detection patterns, the LLM prompts, and the operational configs
+stay private. Those are the layer that creates the business; the proxy
+and the contracts are the layer that creates the trust. The split is
+deliberate.
 
----
+## Operating commitments
 
-## 5. The Open-Core Model
+We do not publish hard SLA percentages in this repo. The reasons are
+honest. Numbers we cannot defend across all pilots today belong in
+negotiated contracts, not in OSS docs.
 
-The containment proxy (`vyrox-proxy`) is MIT licensed and publicly available on GitHub.
+What we can commit publicly:
 
-This is a deliberate trust decision, not a marketing one. The proxy is the component that executes actions on your infrastructure — isolating hosts, killing processes, quarantining network access. Before any security team allows an external service to execute containment actions on their endpoints, they should be able to read the code that does it.
+- The audit log is customer-owned. We do not lose it, we do not modify
+  it, and we provide export at any time. The format is the contract,
+  not our retention policy.
+- Containment proceeds only after a human in Discord clicks Approve.
+  There is no autonomous containment path.
+- Webhook authentication failures and proxy signature failures both
+  return generic 401 responses. We never tell a caller which part of
+  the credential was wrong.
 
-The proxy does one thing: it receives a cryptographically signed instruction from the Vyrox backend, verifies it, rate-limits it, executes the corresponding EDR API call, and writes an audit entry. There is no intelligence in the proxy. It cannot initiate actions. It only responds to verified, human-approved requests.
+Per-customer SLAs that involve uptime targets and triage latency live
+in signed contracts.
 
-What remains proprietary is the detection intelligence — the heuristics patterns, the triage logic, the red team knowledge encoded in the classification engine, and the operational infrastructure that runs a multi-tenant MDR service. That is the moat. Not the execution plumbing.
+## Decisions worth knowing
 
----
+A short list, written for the reader who is asking "why this and not
+that".
 
-## 6. Security Design
+**Rust for the proxy.** The proxy is the only Vyrox process that can
+cause customer-side side effects. The set of properties we wanted in
+one binary: memory safety without a garbage collector, a small static
+binary, a constant-time HMAC implementation in the ecosystem, no
+runtime dependency on a vendor library. The Rust choice gave us all of
+them. The proxy is intentionally small. About a thousand lines of code
+including tests, splitting across `main`, `hmac`, `audit`, `nonce`,
+`edr`, and `actions`.
 
-### HMAC-SHA256 Request Signing
+**SQLite for the pilot.** SQLite with WAL mode and a single writer
+process handles the pilot scale (ten tenants, low hundreds of alerts
+per day per tenant). Write contention bites somewhere around twenty
+five tenants, which is the trigger for the Postgres migration. The
+schema is already SQLModel-compatible, so the migration is a SQL dump
+plus a connection string change, not a rewrite.
 
-Every request between Vyrox services — from the ingestion webhook to the worker, and from the Discord bot to the proxy — is signed with HMAC-SHA256 using a shared secret. Unsigned requests are rejected at the boundary before any processing occurs.
+**Discord as the operator UI.** The first ten pilots use Discord
+exclusively. The bot handles onboarding, alert review, approval, and
+slash commands for stats and audit export. The cost is one extra
+infrastructure provider; the benefit is that a customer's first
+five-minute experience is "I added your bot to my server and a
+synthetic alert appeared." A web dashboard ships when a prospect
+refuses Discord or when customer count reaches eleven, whichever comes
+first.
 
-The proxy adds replay protection: requests with an approval timestamp older than 30 seconds are rejected with HTTP 410. A captured request cannot be replayed later to trigger an unintended action.
+**Two-stage triage.** A pure LLM design is slow, expensive at scale,
+and not auditable without careful prompt engineering. A pure rules
+design misses anything novel. The split lets us run the heuristics for
+free, run the LLM only on the ambiguous middle band, fall back to a
+conservative MEDIUM on any failure, and keep the LLM output strictly
+inside a Pydantic schema before it touches anything else.
 
-### Append-Only Audit Log
+**Human in the loop for execution.** Auto-isolating hosts on false
+positives is the kind of incident that loses you the customer. Until
+we have a year of per-tenant false-positive data, every CRITICAL and
+HIGH containment is gated on a human Approve click. LOW auto-approval
+is opt-in per tenant and logged identically to manual approvals.
 
-Every action executed by the proxy is written to an append-only JSONL audit log with SHA-256 chaining (each entry includes the hash of the previous entry). The log records the action type, the target host, the alert that triggered it, the analyst who approved it, the timestamp, and the EDR vendor response.
+## Cross-references
 
-The log is never modified or deleted by application code. Tenants can export their full audit log at any time via the dashboard or API. It is the authoritative source of truth for post-incident review, compliance reporting, and SOC 2 audit evidence.
-
-### Rate Limiting
-
-The proxy enforces a per-tenant rate limit on execution requests. This prevents a misconfiguration or compromised credential from triggering a large number of containment actions in a short window.
-
-### Human Approval by Default
-
-The system requires explicit human approval for all CRITICAL and HIGH severity actions. Auto-approval is available only for LOW severity alerts above a high confidence threshold, requires explicit per-tenant configuration, and is always recorded in the audit log with the same detail as manually approved actions.
-
-No action is ever taken without being logged. There is no silent execution path.
-
-### Tenant Isolation
-
-Every alert, verdict, action, and audit entry is scoped to a `tenant_id`. Tenant data is isolated at the database level. API keys are per-tenant. Discord channels are per-tenant. A misconfiguration in one tenant's pipeline cannot affect another's.
-
-### Webhook Signature Verification
-
-Incoming webhooks from CrowdStrike, SentinelOne, and Microsoft Defender are verified against their respective signing mechanisms before the payload is parsed. Payloads that fail verification are rejected immediately and logged. They never enter the triage pipeline.
-
----
-
-## 7. SLA & Operational Commitments
-
-| Metric | Commitment |
-|---|---|
-| CRITICAL alert triage | < 15 minutes from ingestion to Discord embed |
-| HIGH alert triage | < 30 minutes from ingestion to Discord embed |
-| Service uptime | 99.9% monthly (ingestion + triage + notification) |
-| Audit log availability | 100% — logs are customer-owned and exportable at any time |
-| False positive rate | < 5% on containment actions (tracked per tenant, published in dashboard) |
-| Analyst response time | < 5 minutes for human escalations during covered hours |
-
-SLA credits are issued automatically for breaches. Full SLA terms are in [SLA.md](./SLA.md).
-
----
-
-## 8. Design Decisions
-
-### Why Rust for the proxy?
-
-The proxy is the only component that executes actions on customer infrastructure. Memory safety is a genuine security requirement here, not a preference. Rust provides memory safety without a garbage collector — no GC pauses during time-sensitive containment actions. The binary is small, starts fast, and has a minimal attack surface.
-
-Publishing the proxy as MIT-licensed code is an argument to CISOs: "The code that touches your endpoints is public, memory-safe, and carries no hidden dependencies."
-
-### Why a two-stage triage pipeline?
-
-A pure LLM approach has three problems in a security context: it is slow, it is expensive at scale, and its decisions are not auditable without careful prompt engineering. A pure rules-based approach handles known TTPs well but misses novel or ambiguous signals.
-
-The two-stage design captures the strengths of both. The heuristics engine handles clear cases quickly, cheaply, and with full explainability. The LLM handles ambiguous cases where pattern matching alone is insufficient. The result is a system that is fast, cost-efficient, and produces human-readable reasoning for every verdict — which is what you need when an analyst has 60 seconds to make a containment decision.
-
-### Why managed service instead of self-hosted software?
-
-Self-hosted security software creates operational burden on the customer: deployment, upgrades, tuning, on-call rotation. The customers who need this product most — Series A companies and mid-market enterprises without a dedicated security team — do not want to operate it. They want the outcome: their alerts handled, their SLA met, their compliance requirements documented. The managed service model delivers that, and it creates a structural advantage: every alert we triage makes our heuristics and LLM prompts better, which benefits every customer simultaneously. A self-hosted model cannot do that.
-
-### Why human-in-the-loop for execution?
-
-SOC teams have been burned by automation that acted on false positives. Isolating a production host or killing a process based on a wrong verdict is a significant operational incident. The human approval step is not a limitation of the technology — it is a feature. It is what allows a security team to trust the system enough to use it in production.
-
-The goal is not to remove humans from the loop. The goal is to reduce the number of decisions a human needs to make from 300 per shift to the 12 that actually require their judgment — and make those 12 decisions faster and better-informed than any current alternative.
-
-### Why pricing by endpoints?
-
-Per-alert pricing creates an adversarial relationship: customers want fewer alerts, we'd earn less if we resolve them faster. Endpoint-based pricing aligns incentives: we earn more as customers grow, and we're incentivized to resolve alerts as efficiently as possible. It also makes budgeting predictable — a CISO can tie the cost directly to the number they already report: endpoints under management.
-
----
-
-## 9. Integrating with Vyrox
-
-Integration requires three things: a webhook configured in your EDR console, a Discord bot installed in your server, and a one-time onboarding call to configure your alert routing preferences and containment policies.
-
-**Integration time for a CrowdStrike tenant: approximately 15 minutes.**
-
-The full integration guide is in [QUICKSTART.md](./QUICKSTART.md).
-
-The webhook payload schema for CrowdStrike, SentinelOne, and Microsoft Defender is documented in [API_REFERENCE.md](./API_REFERENCE.md).
-
-The security architecture, HMAC design, and audit log specification are covered in [SECURITY_WHITEPAPER.md](./SECURITY_WHITEPAPER.md).
-
-The containment proxy source code is at [github.com/vyrox-security/vyrox-proxy](https://github.com/vyrox-security/vyrox-proxy).
-
----
-
-*Questions or issues? Open an issue in [vyrox-security/.github](https://github.com/vyrox-security/.github) or contact us at hello@vyrox.dev.*
+- [`THREAT_MODEL.md`](THREAT_MODEL.md): assets, threats, mitigations,
+  out of scope.
+- [`API_REFERENCE.md`](API_REFERENCE.md): every public endpoint with
+  schemas and error codes.
+- [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md): on-disk format spec for the
+  hash-chained audit log.
+- [`ADAPTERS.md`](ADAPTERS.md): contributor guide for adding a new
+  EDR vendor.
+- [`QUICKSTART.md`](QUICKSTART.md): from `git clone` to a signed alert
+  in about ten minutes.
+- Rust proxy source: <https://github.com/vyrox-security/vyrox-proxy>.
+- Simulator: <https://github.com/vyrox-security/vyrox-simulator>.
