@@ -261,3 +261,78 @@ pre {
     .content h4 { font-size: 1.25rem; }
     .content table { font-size: 1.35rem; }
 }
+
+/* -------------------------------------------------------------------
+ * Layout fixes for the chapter-arrow nav.
+ *
+ * mdBook's default chrome hides the wide previous/next arrows when
+ * the sidebar is open AND the viewport is narrower than 1380px. That
+ * leaves only the mobile inline arrows at the bottom of the page,
+ * which is what someone in the middle viewport band actually sees.
+ * The fix: keep the wide arrows visible across the full sidebar-open
+ * range so the layout reads as "sidebar on the left, content in the
+ * middle, arrows on the edges". Overrides go in this file because we
+ * load it after mdBook's chrome.css.
+ * ------------------------------------------------------------------- */
+@media only screen and (max-width: 1380px) {
+    /* When the sidebar is open, do NOT swap to mobile-style nav.
+       Keep the wide arrows on the left and right edges. */
+    #mdbook-sidebar-toggle-anchor:checked ~ .page-wrapper .nav-wide-wrapper {
+        display: block;
+    }
+    #mdbook-sidebar-toggle-anchor:checked ~ .page-wrapper .nav-wrapper {
+        display: none;
+    }
+}
+
+/* -------------------------------------------------------------------
+ * Explicit arrow positioning. mdBook's chrome already puts
+ * `.previous { float: left }` and `.next { float: right }`, but a
+ * couple of `[dir=rtl]` and specificity edge cases can flip them on
+ * some viewports. We pin the positions with higher-specificity rules
+ * that ignore direction since the docs are LTR.
+ * ------------------------------------------------------------------- */
+nav.nav-wide-wrapper a.nav-chapters.previous {
+    left: var(--page-padding);
+    right: auto;
+    float: left;
+}
+
+nav.nav-wide-wrapper a.nav-chapters.next {
+    right: var(--page-padding);
+    left: auto;
+    float: right;
+}
+
+/* The mobile nav stays as a fallback for viewports under 1080px. We
+   only show it when there is genuinely no room for the wide arrows. */
+@media only screen and (max-width: 1080px) {
+    .nav-wide-wrapper { display: none !important; }
+    .nav-wrapper { display: block !important; }
+}
+
+/* -------------------------------------------------------------------
+ * Sidebar default-visible safety net.
+ *
+ * head.hbs pre-sets the localStorage key, but on the very first paint
+ * before JS runs we want the sidebar visible on any viewport wide
+ * enough to support the side-by-side layout. mdBook's default applies
+ * `sidebar-visible` to <html> based on width; we re-assert here so a
+ * CSS-only client (or one with JS disabled) still sees the chapters.
+ * ------------------------------------------------------------------- */
+@media only screen and (min-width: 1080px) {
+    html:not(.js) .sidebar { transform: none !important; }
+    html:not(.js) .page-wrapper {
+        margin-inline-start: calc(var(--sidebar-width) + var(--sidebar-resize-indicator-width)) !important;
+    }
+}
+
+/* -------------------------------------------------------------------
+ * Paint the dark background before any stylesheet that follows can
+ * override it. Belt-and-braces against a flash of white if our
+ * variables.css loads later than expected on a cold browser cache.
+ * ------------------------------------------------------------------- */
+html, body {
+    background-color: #0a0a0b !important;
+    color: #ece3cc;
+}
