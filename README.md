@@ -1,182 +1,152 @@
-![Vyrox Docs Banner](assets/vyrox-docs-banner.png)
+# Vyrox Security
 
-# Vyrox — AI Security Copilot
+> AI security copilot for teams without a dedicated SOC. Ingests EDR alerts,
+> triages them through a deterministic heuristics engine and an LLM fallback,
+> and routes the verdicts that matter to a human approver in Discord. Every
+> containment action runs through a small Rust proxy that the customer can
+> read and audit.
 
-> **Vyrox is an AI Security Copilot that runs your SOC 24/7.** We automatically triage alerts, surface critical incidents in Discord, and handle containment — so you don't have to.
-
-[![Open Source: vyrox-proxy](https://img.shields.io/badge/Open%20Source-vyrox--proxy-blue?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy/blob/main/LICENSE)
-[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange?style=flat-square)](#design-partners)
-
----
-
-## What Vyrox Does
-
-Vyrox is your 24/7 AI security operations team. We don't just triage alerts — we run your complete security operations.
-
-```
-[Data Sources]                    [Three-Layer Operations]
-    │                                    │
-[EDR + Vuln Scanners + Cloud APIs]     │
-    │                                    ▼
-    │              ┌─────────────────────────────────────┐
-    │              │         VYROX AI SECURITY COPILOT     │
-    │              │                                      │
-    │              │  Layer 1: Always-On (Autonomous)     │
-    │              │  • Continuous monitoring             │
-    │              │  • Vulnerability surface map         │
-    │              │  • Automated response playbooks      │
-    │              │  • Compliance evidence               │
-    │              │                                      │
-    │              │  Layer 2: Assisted (AI + Human)     │
-    │              │  • Complex investigation             │
-    │              │  • Weekly AI security briefings     │
-    │              │  • Security posture recommendations  │
-    │              │                                      │
-    │              │  Layer 3: Escalated (Human Expert) │
-    │              │  • Critical incidents                │
-    │              │  • Strategic advisory                │
-    │              │  • Board-level reporting             │
-    │              └─────────────────────────────────────┘
-    │                      │
-    ▼                      ▼
-[Audit Log]           [vyrox-proxy]
-(Append-only,         (MIT licensed,
-SHA-256 chained)       publicly auditable)
-```
-
-**The promise:** "We'll run your security operations the way a $500K/year SOC team would — for a fraction of that cost."
+[![License: MIT (proxy)](https://img.shields.io/badge/proxy-MIT-green?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy/blob/main/LICENSE)
+[![Status](https://img.shields.io/badge/status-alpha-orange?style=flat-square)](#status)
+[![Audit](https://img.shields.io/badge/audit_log-SHA--256_chained-blue?style=flat-square)](AUDIT_CHAIN.md)
 
 ---
 
-## Key Properties
+## What this repository is
 
-| Property | Detail |
-|---|---|
-| 24/7 Coverage | Always-on, not just business hours |
-| Proactive Hunting | Find attackers before they act |
-| Integration time | ~15 minutes (webhook + Discord) |
-| EDR support | CrowdStrike, SentinelOne, Microsoft Defender |
-| Human approval | Required for critical — automated for low-risk |
-| Audit log | Append-only JSONL, SHA-256 chained, customer-exportable |
-| Execution layer | Open-source, MIT licensed, publicly auditable |
+`vyrox-docs` is the public engineering documentation for the Vyrox Security
+platform. It carries the architecture, the API contracts, the threat model,
+the audit-log specification, and the contributor guides. Sales copy,
+pricing, customer rosters, and SLA contract language live elsewhere.
 
----
+If you found this repo looking for the source code that touches your
+endpoints, you want [`vyrox-proxy`](https://github.com/vyrox-security/vyrox-proxy).
+That is the Rust binary that receives signed containment instructions from
+the rest of the platform and calls the EDR vendor's API. It is MIT licensed
+and small enough to read in an afternoon.
 
-## Pricing Tiers
+## What Vyrox actually does
 
-Multiple tiers available to match company size and security needs. Contact hello@vyrox.dev for details.
+Pipeline in five steps:
 
----
+1. Your EDR posts alerts to a Vyrox webhook over HTTPS. Each payload is
+   authenticated per tenant with HMAC-SHA256 or a vendor-specific bearer
+   token. CrowdStrike, SentinelOne, Microsoft Defender, and a customer
+   field-mapped generic adapter are all supported today.
+2. Ingestion verifies the signature, normalises the vendor payload into a
+   single `NormalizedAlert` schema, and pushes it onto a per-tenant Redis
+   queue.
+3. The worker pulls the alert and runs it through the heuristics engine
+   (deterministic regex-and-weight pattern matching with Noisy OR
+   aggregation). The result is one of CRITICAL, HIGH, MEDIUM, LOW, BENIGN
+   plus a confidence score.
+4. Anything in the ambiguous confidence band goes to an LLM with a strict
+   JSON schema response. The LLM never executes anything. It only writes
+   verdict fields. A Pydantic validator catches malformed responses and
+   falls back to a conservative MEDIUM verdict at 0.5 confidence.
+5. CRITICAL and HIGH verdicts land in the tenant's Discord channel as an
+   embed with Approve, Deny, and Investigate buttons. Approve generates an
+   `ActionRequest`, signs it, and sends it to the Rust proxy. The proxy
+   verifies the signature, checks a thirty-second replay window, dedupes
+   on request ID, writes an audit entry, then either dry-runs or calls
+   the EDR vendor's API.
 
-## Open-Core Model
+Six rules hold across the whole pipeline. They are documented in
+[`ARCHITECTURE.md`](ARCHITECTURE.md#critical-rules) and enforced by tests.
+The shortest version:
 
-**What is public:**
-- `vyrox-proxy` — The Rust proxy that executes containment. Read the code that touches your infrastructure.
-- `vyrox-docs` — Architecture, API reference, integration guide.
-- `vyrox-simulator` — Alert simulation scripts for testing.
+- Every database query carries `tenant_id`.
+- Every state change writes an audit entry before the response goes back.
+- HMAC verification happens before any payload is parsed.
+- The LLM cannot trigger containment. Only a human button click can.
+- Local development sets `DRY_RUN=true` by default so the proxy refuses to
+  call real EDR APIs.
+- LLM JSON output is never passed to `exec`, `eval`, `subprocess`, SQL, or
+  file operations. Only to Pydantic-validated verdict fields.
 
-**What is private:**
-- Heuristics engine — Detection patterns and scoring logic.
-- LLM prompt templates — Tuning for triage decisions.
-- Multi-tenant infrastructure.
+## What is public, what is not
 
-The split is intentional: the execution layer is auditable; the intelligence is proprietary.
+Open-core. The execution surface that touches customer infrastructure is
+open. The detection intelligence and the operational configuration is not.
 
----
+| Component | Repo | Visibility | Why |
+|---|---|---|---|
+| Rust containment proxy | [`vyrox-proxy`](https://github.com/vyrox-security/vyrox-proxy) | Public, MIT | Customers should be able to read the code that isolates their hosts. |
+| Engineering docs | `vyrox-docs` (this repo) | Public | Threat model, API contracts, contributor guides. |
+| Alert simulator | [`vyrox-simulator`](https://github.com/vyrox-security/vyrox-simulator) | Public, MIT | Lets anyone replay a signed alert against a local stack. |
+| Core monorepo | `vyrox` | Private | Ingestion, worker, Discord bot. The pipeline shape is documented here; the implementation is not. |
+| Heuristics engine | `vyrox-heuristics` | Private | Pattern weights, MITRE technique mapping, false-positive baselines. The detection moat. |
+| Adversarial playbook | `vyrox-adversarial-playbook` | Private | Red-team TTPs we test against. |
+| Infrastructure | `vyrox-deploy` | Private | Provider-specific configs and secrets. |
+| Partner CRM | `vyrox-design-partners` | Private | GTM, contracts, prospect roster. |
 
-## Quick Start
+If you want to contribute, you can do it against `vyrox-proxy`,
+`vyrox-simulator`, or this docs repo without ever touching the private
+side. The contribution guide is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-### 1. Run the alert simulator
+## Documents in this repo
 
-The simulator is pure bash — no Python or other runtime required. Just
-`bash`, `openssl`, and `curl` (all standard on macOS and Linux).
+Read in this order if you are new:
 
-```bash
-git clone https://github.com/vyrox-security/vyrox-simulator
-cd vyrox-simulator
+1. [`QUICKSTART.md`](QUICKSTART.md) walks you from `git clone` to a signed
+   alert hitting a local proxy. About ten minutes, no production
+   credentials required.
+2. [`ARCHITECTURE.md`](ARCHITECTURE.md) is the system reference. Pipeline
+   stages, multi-tenancy, audit chain, the six critical rules, the
+   container boundary diagram, the decisions behind each component.
+3. [`THREAT_MODEL.md`](THREAT_MODEL.md) lists the assets, the threats, the
+   mitigations, and the things explicitly out of scope. If you are
+   evaluating Vyrox for a regulated workload, start here.
+4. [`API_REFERENCE.md`](API_REFERENCE.md) documents every public endpoint:
+   the four ingestion webhooks, the proxy's `/execute` and `/audit/export`,
+   request and response shapes, error codes, signing rules.
+5. [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md) is the wire spec for the SHA-256
+   hash-chained audit log. Independent verifiers can reproduce the chain
+   from the JSONL stream alone.
+6. [`ADAPTERS.md`](ADAPTERS.md) is for contributors adding a new EDR
+   vendor. Four rules to follow, one factory method to write, one test
+   file to copy.
+7. [`SECURITY.md`](SECURITY.md) is the disclosure policy. Email address,
+   PGP key, scope, SLA on triage, what we do not call a vulnerability.
+8. [`ROADMAP.md`](ROADMAP.md) is the public roadmap by capability. No
+   revenue targets, no customer counts.
+9. [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+   cover how to send a patch and what behaviour is expected.
 
-# Mimikatz credential dump — should classify as CRITICAL
-./simulate.sh mimikatz
+## Status
 
-# Benign sysadmin activity — should classify as BENIGN, no Discord message
-./simulate.sh benign
+Alpha. The pipeline is wired end to end and runs against synthetic alerts
+in CI on every push. Ten pilot integrations are the next milestone. The
+two recent audits in `todo.md` (a private file) drove the P0 fixes and
+the P0.5 follow-ups already merged. Test counts at the moment of writing
+this README: 89 Python tests, 17 Rust tests, lints clean across the
+workspace.
 
-# See the signed payload without POSTing anywhere (offline preview)
-./simulate.sh mimikatz --dry-run
-```
+What "alpha" means in practice:
 
-### 2. Read the proxy code
+- The on-disk audit format is stable. Field names will not change without
+  a documented migration. [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md) is the
+  contract.
+- The HMAC signing format is stable. Python `sign` returns
+  `sha256=<hex>` and the Rust proxy strips the prefix before
+  constant-time-comparing.
+- The ingestion webhook URL shape is stable. The four routes documented
+  in `API_REFERENCE.md` are the ones we will keep.
+- Anything else can move. Internal data models, the LLM provider, the
+  worker concurrency model. We will note breaking changes in the
+  CHANGELOG once a release tagging discipline lands.
 
-```bash
-git clone https://github.com/vyrox-security/vyrox-proxy
-cd vyrox-proxy
-cargo run -- --help
-```
+## Security contact
 
-The proxy receives signed instructions, verifies HMAC, rate-limits, executes the EDR API call, and writes an audit entry. That's all it does.
-
-### 3. Read the architecture
-
-Full architecture documentation: [ARCHITECTURE.md](./ARCHITECTURE.md)
-
----
-
-## Design Partners
-
-Vyrox is in alpha. We are accepting design partners who want to be first to experience the AI Security Copilot.
-
-**What you get:**
-- 3 months free (Starter tier)
-- Direct line to the founding team
-- Product roadmap shaped by your feedback
-
-**What we ask:**
-- Honest feedback
-- Anonymized metrics in case studies
-- A 30-minute call every 2 weeks
-
-**You qualify if:**
-- Run CrowdStrike, SentinelOne, or Microsoft Defender
-- Handle 100+ alerts per day
-- Want 24/7 security operations, not just alert triage
-
-Apply: hello@vyrox.dev (subject: "design partner")
-
----
-
-## Repository Overview
-
-| Repo | Visibility | Description |
-|------|------------|-------------|
-| [vyrox](https://github.com/vyrox-security/vyrox) | 🔒 Private | Core pipeline: ingestion, triage, approval |
-| [vyrox-proxy](https://github.com/vyrox-security/vyrox-proxy) | 🌐 Public (MIT) | Containment proxy |
-| [vyrox-docs](https://github.com/vyrox-security/vyrox-docs) | 🌐 Public | Architecture, API reference, this site |
-| [vyrox-simulator](https://github.com/vyrox-security/vyrox-simulator) | 🌐 Public (MIT) | Alert simulation scripts |
-| [vyrox-landing](https://github.com/vyrox-security/vyrox-landing) | 🌐 Public | Marketing site |
-
-Private repos: `vyrox-heuristics` (detection engine), `vyrox-deploy` (infra), `vyrox-design-partners` (CRM).
-
----
-
-## Security
-
-Found a vulnerability? Do not open a public issue. Email: **sec.vyrox@proton.me**
-
-Response SLA: acknowledgement within 48h, initial triage within 7 days, patch timeline within 14 days.
-
-PGP key: [vyrox.dev/.well-known/pgp-key.txt](https://vyrox.dev/.well-known/pgp-key.txt)
-
-Full security policy: [SECURITY.md](./SECURITY.md)
-
----
+`sec.vyrox@proton.me`, PGP key at
+[`vyrox.dev/.well-known/pgp-key.txt`](https://vyrox.dev/.well-known/pgp-key.txt).
+Acknowledgement within forty-eight hours. Full policy in
+[`SECURITY.md`](SECURITY.md). Please do not file vulnerabilities as
+public GitHub issues.
 
 ## License
 
-`vyrox-proxy` and `vyrox-simulator` are MIT licensed.
-
-`vyrox-docs`, `vyrox-landing`, `vyrox-heuristics`, `vyrox-deploy`, `vyrox-design-partners`, and the `vyrox` monorepo are proprietary.
-
----
-
-*Vyrox Security, Inc. — hello@vyrox.dev*
+This documentation is proprietary. Quoting short passages with attribution
+is fine. Republishing whole files is not. The open-source components
+(`vyrox-proxy`, `vyrox-simulator`) are MIT licensed and carry their own
+`LICENSE` files.
