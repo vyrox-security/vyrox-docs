@@ -16,7 +16,7 @@ the following build configuration.
 | Build command | `bash scripts/build.sh` |
 | Build output directory | `book` |
 | Root directory | `/` |
-| Environment variable | `MDBOOK_VERSION=v0.4.40` |
+| Environment variable | `MDBOOK_VERSION=v0.5.3` |
 
 The build command downloads a pinned mdBook release into
 `.mdbook-bin/` if the binary is not already on PATH, syncs the
