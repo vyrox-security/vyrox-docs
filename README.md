@@ -1,10 +1,6 @@
 # Vyrox Security
 
-> AI security copilot for teams without a dedicated SOC. Ingests EDR alerts,
-> triages them through a deterministic heuristics engine and an LLM fallback,
-> and routes the verdicts that matter to a human approver in Discord. Every
-> containment action runs through a small Rust proxy that the customer can
-> read and audit.
+# Your AI Security Copilot
 
 [![License: MIT (proxy)](https://img.shields.io/badge/proxy-MIT-green?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy/blob/main/LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange?style=flat-square)](#status)
@@ -146,7 +142,10 @@ public GitHub issues.
 
 ## License
 
-This documentation is proprietary. Quoting short passages with attribution
-is fine. Republishing whole files is not. The open-source components
-(`vyrox-proxy`, `vyrox-simulator`) are MIT licensed and carry their own
-`LICENSE` files.
+`vyrox-proxy` and `vyrox-simulator` are MIT licensed.
+
+`vyrox-docs`, `vyrox-landing`, `vyrox-heuristics`, `vyrox-deploy`, `vyrox-design-partners`, and the `vyrox` monorepo are proprietary.
+
+---
+
+*Vyrox Security, Inc. — hello@vyrox.dev*
