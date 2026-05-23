@@ -34,7 +34,16 @@ preferred-dark-theme = "navy"
 # copy-paste. Leaving curly-quotes on for prose readability.
 smart-punctuation = false
 
-additional-css = ["theme/css/variables.css", "theme/css/typography.css"]
+# Critical: do NOT name override files after mdBook's own bundled
+# theme files (variables.css, general.css, chrome.css, print.css).
+# mdBook treats any file in `theme/css/` whose name matches a
+# bundled file as a full replacement, which wipes out the standard
+# variables like `--page-padding` and `--sidebar-resize-indicator-width`.
+# That broke the chapter-nav arrow positioning and the sidebar width
+# in the first deploy. We use `brand.css` for the palette overrides
+# instead, and add it as additional-css so it cascades on top of the
+# defaults.
+additional-css = ["theme/css/brand.css", "theme/css/typography.css"]
 additional-js = []
 
 # Edit-this-page link on every chapter. Points at the top-level file
