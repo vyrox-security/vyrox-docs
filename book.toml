@@ -20,10 +20,13 @@ build-dir = "book"
 create-missing = false
 
 [output.html]
-# Use the brand colour for the in-page accent and the website meta tags.
-# Light theme is the daylight reading mode (bone palette). Dark theme
-# is the void palette. Both are styled by theme/css/variables.css.
-default-theme = "light"
+# Vyrox docs are dark-only. The brand spec calls for the void / pitch
+# surface and customers reading at 2am should not be flashed with
+# white. We set both the default theme and the preferred-dark theme
+# to "navy" (our void-palette override) and our variables.css makes
+# every other built-in theme name fall through to the same dark
+# colour set so a user who picks a different theme still sees dark.
+default-theme = "navy"
 preferred-dark-theme = "navy"
 
 # Smarter punctuation handling. mdBook would otherwise turn the "--"

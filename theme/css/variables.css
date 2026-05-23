@@ -1,80 +1,45 @@
 /*
  * Vyrox docs theme variables.
  *
- * The target visual is a clean reference doc in the style of the Rust
- * book (https://doc.rust-lang.org/stable/book/). Plain near-white
- * background, high-contrast text, a single accent colour for links
- * and active sidebar items, no decorative borders.
+ * Dark-only by design. The brand surface is "void" and the docs are
+ * read in operator contexts where a white page is the wrong choice.
+ * Every built-in mdBook theme class (.light, .navy, .coal, .ayu, .rust)
+ * resolves to the same dark colour set so a stale localStorage
+ * preference cannot flash a light page.
  *
- * The brand still shows up through the ember accent and the heading
- * face, but it does not fight the prose.
- *
- * mdBook ships several built-in themes. We override only the
- * variables we need; everything else falls through to the upstream
- * defaults.
+ * The palette comes from product.md:
+ *   void     #050505   page background
+ *   pitch    #0A0A0B   raised surface
+ *   graphite #14141A   sidebar surface
+ *   ash      #1F1F26   borders, rules
+ *   bone     #ECE3CC   primary text on void
+ *   clay     #6B5E48   muted text on void
+ *   marrow   #FFE6B0   inline code colour
+ *   ember    #E8462E   primary accent
+ *   ember-2  #FF6A3D   active links, active sidebar
+ *   ember-3  #FF9156   link colour, brighter for AA contrast
+ *   rust     #8B2A12   search-highlight background
  */
 
 :root {
-    /* Slightly wider than mdBook's default to fit the longer tables
-       in the API reference without horizontal scroll. The Rust book
-       uses 750px; we go to 820px because our API tables are wider. */
     --content-max-width: 820px;
     --sidebar-target-width: 290px;
 }
 
-/* -------------------------------------------------------------------
- * Light theme. The default and the recommended reading experience.
- * Near-white background, near-black text, ember accent.
- * ------------------------------------------------------------------- */
-.light, html:not(.js) {
-    --bg: hsl(0, 0%, 100%);
-    --fg: hsl(0, 0%, 12%);
-
-    --sidebar-bg: #fafafa;
-    --sidebar-fg: hsl(0, 0%, 12%);
-    --sidebar-non-existant: #aaa;
-    --sidebar-active: #c93a25;
-    --sidebar-spacer: #f0f0f0;
-
-    --scrollbar: #8f8f8f;
-
-    --icons: #747474;
-    --icons-hover: #c93a25;
-
-    --links: #c93a25;
-    --inline-code-color: #6b1a08;
-
-    --theme-popup-bg: #fafafa;
-    --theme-popup-border: #d8d8d8;
-    --theme-hover: #ececec;
-
-    --quote-bg: #f6f6f6;
-    --quote-border: #e5e5e5;
-
-    --warning-border: #c9892f;
-
-    --table-border-color: hsl(0, 0%, 92%);
-    --table-header-bg: hsl(0, 0%, 96%);
-    --table-alternate-bg: hsl(0, 0%, 98%);
-
-    --searchbar-border-color: #cccccc;
-    --searchbar-bg: #ffffff;
-    --searchbar-fg: #0e0a05;
-    --searchbar-shadow-color: rgba(0, 0, 0, 0.08);
-    --searchresults-header-fg: #777;
-    --searchresults-border-color: #e5e5e5;
-    --searchresults-li-bg: #fafafa;
-    --search-mark-bg: #ffe6b0;
-
-    --color-scheme: light;
-}
-
-/* -------------------------------------------------------------------
- * Dark theme (navy). Selected automatically for users whose OS
- * prefers dark. Pitch black background, warm-cream text, brighter
- * ember accent for AA contrast.
- * ------------------------------------------------------------------- */
-.navy {
+/*
+ * Single declaration block applied to every theme name. mdBook switches
+ * the html class but every class resolves to the same values. We pin
+ * `color-scheme: dark` on :root too so browser-provided UI (scrollbars,
+ * form controls) match.
+ */
+:root,
+html,
+.light,
+.rust,
+.coal,
+.navy,
+.ayu,
+html:not(.js) {
     --bg: #0a0a0b;
     --fg: #ece3cc;
 
@@ -117,15 +82,17 @@
     --color-scheme: dark;
 }
 
-/* -------------------------------------------------------------------
- * Selection colour. Subtle ember tint on light, slightly stronger on
- * dark so the highlight reads through the lower-contrast surface.
- * ------------------------------------------------------------------- */
-.light ::selection {
-    background: rgba(232, 70, 46, 0.16);
-    color: #0e0a05;
-}
-.navy ::selection {
+::selection {
     background: rgba(255, 106, 61, 0.32);
     color: #ece3cc;
+}
+
+/*
+ * Hide the theme picker entirely. Dark is the only mode; offering a
+ * choice that does nothing is worse than offering no choice.
+ */
+.icon-button#theme-toggle,
+.icon-button[aria-controls="theme-list"],
+#theme-list {
+    display: none !important;
 }
