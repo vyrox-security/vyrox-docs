@@ -1,0 +1,63 @@
+# mdBook configuration for the Vyrox public documentation site.
+#
+# The canonical source for every chapter is a top-level Markdown file
+# in the repo root (README.md, ARCHITECTURE.md, etc). `scripts/build.sh`
+# copies them into src/ before invoking `mdbook build`, so editing the
+# top-level file is the only place a contributor needs to touch.
+#
+# Output goes to `book/`. Cloudflare Pages serves the contents of
+# `book/` as the static site.
+
+[book]
+title = "Vyrox Security"
+description = "Engineering documentation for the Vyrox security platform: architecture, API contracts, threat model, audit-log spec, EDR adapter guide."
+authors = ["Vyrox Security"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+# Use the brand colour for the in-page accent and the website meta tags.
+# Light theme is the daylight reading mode (bone palette). Dark theme
+# is the void palette. Both are styled by theme/css/variables.css.
+default-theme = "light"
+preferred-dark-theme = "navy"
+
+# Smarter punctuation handling. mdBook would otherwise turn the "--"
+# sequences that appear in CLI examples into en-dashes, which breaks
+# copy-paste. Leaving curly-quotes on for prose readability.
+smart-punctuation = false
+
+additional-css = ["theme/css/variables.css", "theme/css/typography.css"]
+additional-js = []
+
+# Edit-this-page link on every chapter. Points at the top-level file
+# the chapter mirrors, so an external contributor who clicks "edit"
+# lands on the canonical source.
+git-repository-url = "https://github.com/vyrox-security/vyrox-docs"
+git-repository-icon = "fab-github"
+edit-url-template = "https://github.com/vyrox-security/vyrox-docs/edit/main/{path}"
+
+# Site-wide footer text. Single line because mdBook expects it.
+[output.html.print]
+enable = true
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+copy-js = true
+
+# Custom hook into the document head: pulls in the three Google Fonts
+# (Fraunces, Geist, JetBrains Mono) and adds the favicon.
+[preprocessor.links]
+[preprocessor.index]

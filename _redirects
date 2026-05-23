@@ -1,0 +1,29 @@
+# Cloudflare Pages redirects.
+#
+# Lines are `<source> <destination> <status>`. mdBook publishes every
+# chapter at /<NAME>.html where NAME is the source filename without
+# the extension. We redirect the friendlier /<name> paths (and the
+# .md form a developer might type) to the canonical .html URL.
+#
+# Reference: https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Root convenience aliases.
+/architecture           /ARCHITECTURE.html        301
+/threat-model           /THREAT_MODEL.html        301
+/audit-chain            /AUDIT_CHAIN.html         301
+/api                    /API_REFERENCE.html       301
+/api-reference          /API_REFERENCE.html       301
+/adapters               /ADAPTERS.html            301
+/quickstart             /QUICKSTART.html          301
+/contributing           /CONTRIBUTING.html        301
+/security               /SECURITY.html            301
+/roadmap                /ROADMAP.html             301
+/code-of-conduct        /CODE_OF_CONDUCT.html     301
+
+# Anyone typing the canonical filename with .md gets the rendered page.
+/*.md                   /:splat.html              301
+
+# Legacy SETUP_GUIDE.md is moved to vyrox-design-partners. Redirect the
+# old public URL to a friendly explainer page.
+/SETUP_GUIDE.html       /QUICKSTART.html          308
+/setup                  /QUICKSTART.html          308

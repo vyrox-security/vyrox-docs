@@ -1,0 +1,131 @@
+/*
+ * Vyrox docs theme variables.
+ *
+ * The target visual is a clean reference doc in the style of the Rust
+ * book (https://doc.rust-lang.org/stable/book/). Plain near-white
+ * background, high-contrast text, a single accent colour for links
+ * and active sidebar items, no decorative borders.
+ *
+ * The brand still shows up through the ember accent and the heading
+ * face, but it does not fight the prose.
+ *
+ * mdBook ships several built-in themes. We override only the
+ * variables we need; everything else falls through to the upstream
+ * defaults.
+ */
+
+:root {
+    /* Slightly wider than mdBook's default to fit the longer tables
+       in the API reference without horizontal scroll. The Rust book
+       uses 750px; we go to 820px because our API tables are wider. */
+    --content-max-width: 820px;
+    --sidebar-target-width: 290px;
+}
+
+/* -------------------------------------------------------------------
+ * Light theme. The default and the recommended reading experience.
+ * Near-white background, near-black text, ember accent.
+ * ------------------------------------------------------------------- */
+.light, html:not(.js) {
+    --bg: hsl(0, 0%, 100%);
+    --fg: hsl(0, 0%, 12%);
+
+    --sidebar-bg: #fafafa;
+    --sidebar-fg: hsl(0, 0%, 12%);
+    --sidebar-non-existant: #aaa;
+    --sidebar-active: #c93a25;
+    --sidebar-spacer: #f0f0f0;
+
+    --scrollbar: #8f8f8f;
+
+    --icons: #747474;
+    --icons-hover: #c93a25;
+
+    --links: #c93a25;
+    --inline-code-color: #6b1a08;
+
+    --theme-popup-bg: #fafafa;
+    --theme-popup-border: #d8d8d8;
+    --theme-hover: #ececec;
+
+    --quote-bg: #f6f6f6;
+    --quote-border: #e5e5e5;
+
+    --warning-border: #c9892f;
+
+    --table-border-color: hsl(0, 0%, 92%);
+    --table-header-bg: hsl(0, 0%, 96%);
+    --table-alternate-bg: hsl(0, 0%, 98%);
+
+    --searchbar-border-color: #cccccc;
+    --searchbar-bg: #ffffff;
+    --searchbar-fg: #0e0a05;
+    --searchbar-shadow-color: rgba(0, 0, 0, 0.08);
+    --searchresults-header-fg: #777;
+    --searchresults-border-color: #e5e5e5;
+    --searchresults-li-bg: #fafafa;
+    --search-mark-bg: #ffe6b0;
+
+    --color-scheme: light;
+}
+
+/* -------------------------------------------------------------------
+ * Dark theme (navy). Selected automatically for users whose OS
+ * prefers dark. Pitch black background, warm-cream text, brighter
+ * ember accent for AA contrast.
+ * ------------------------------------------------------------------- */
+.navy {
+    --bg: #0a0a0b;
+    --fg: #ece3cc;
+
+    --sidebar-bg: #050505;
+    --sidebar-fg: #ece3cc;
+    --sidebar-non-existant: #6b5e48;
+    --sidebar-active: #ff6a3d;
+    --sidebar-spacer: #14141a;
+
+    --scrollbar: #2a2a30;
+
+    --icons: #8a8a90;
+    --icons-hover: #ff6a3d;
+
+    --links: #ff9156;
+    --inline-code-color: #ffe6b0;
+
+    --theme-popup-bg: #0a0a0b;
+    --theme-popup-border: #1f1f26;
+    --theme-hover: #14141a;
+
+    --quote-bg: #14141a;
+    --quote-border: #1f1f26;
+
+    --warning-border: #c9892f;
+
+    --table-border-color: #1f1f26;
+    --table-header-bg: #14141a;
+    --table-alternate-bg: #0e0e12;
+
+    --searchbar-border-color: #1f1f26;
+    --searchbar-bg: #14141a;
+    --searchbar-fg: #ece3cc;
+    --searchbar-shadow-color: rgba(255, 106, 61, 0.18);
+    --searchresults-header-fg: #c9bfa8;
+    --searchresults-border-color: #1f1f26;
+    --searchresults-li-bg: #0a0a0b;
+    --search-mark-bg: #8b2a12;
+
+    --color-scheme: dark;
+}
+
+/* -------------------------------------------------------------------
+ * Selection colour. Subtle ember tint on light, slightly stronger on
+ * dark so the highlight reads through the lower-contrast surface.
+ * ------------------------------------------------------------------- */
+.light ::selection {
+    background: rgba(232, 70, 46, 0.16);
+    color: #0e0a05;
+}
+.navy ::selection {
+    background: rgba(255, 106, 61, 0.32);
+    color: #ece3cc;
+}

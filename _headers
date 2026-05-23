@@ -1,0 +1,33 @@
+# Cloudflare Pages headers.
+#
+# This file is copied into the build output at deploy time. The hosting
+# layer applies these headers to every matched request. Reference:
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# We keep the rule set tight. Defaults are deny-by-default for the
+# things that should never be there; explicit allows where the site
+# legitimately reaches off-host (Google Fonts only).
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+# Aggressive caching on hashed asset files. mdBook fingerprints every
+# CSS, JS, and font filename so this is safe for them.
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/FontAwesome/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML revalidates fast so a docs update lands within minutes of a
+# Cloudflare Pages deploy without users seeing a stale page.
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

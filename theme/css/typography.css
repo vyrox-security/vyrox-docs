@@ -1,0 +1,263 @@
+/*
+ * Vyrox docs typography.
+ *
+ * Visual target is the Rust book: clean reference-doc feel, sans-serif
+ * body and headings, generous line-height, content centered in a
+ * readable column. We use Geist for body, Fraunces only for the page
+ * H1 as a tasteful brand accent, and JetBrains Mono for all code.
+ *
+ * Font scale is rem-based on top of mdBook's 62.5% root, so 1.6rem
+ * resolves to ~16px on default browser settings.
+ */
+
+/* Body */
+html,
+body,
+.content {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "kern", "liga", "calt";
+    font-optical-sizing: auto;
+}
+
+body {
+    font-size: 1.6rem;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+.content {
+    line-height: 1.6;
+}
+
+/* Headings.
+ *
+ * Geist for h2 and below so the page reads as a reference doc, not a
+ * magazine. H1 keeps Fraunces because the brand spec calls for the
+ * variable serif and the H1 is the one place a touch of identity does
+ * not fight the prose. */
+.content h1 {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: 2.8rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-block-start: 0.4em;
+    margin-block-end: 0.6em;
+    font-variation-settings: "opsz" 96, "SOFT" 0, "WONK" 0;
+}
+
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+}
+
+.content h2 {
+    font-size: 2rem;
+    margin-block-start: 2.2em;
+    margin-block-end: 0.6em;
+}
+.content h3 {
+    font-size: 1.7rem;
+    margin-block-start: 1.8em;
+    margin-block-end: 0.5em;
+}
+.content h4 {
+    font-size: 1.4rem;
+    margin-block-start: 1.6em;
+    margin-block-end: 0.4em;
+}
+.content h5 {
+    font-size: 1.2rem;
+    margin-block-start: 1.4em;
+}
+.content h6 {
+    font-size: 1.1rem;
+    margin-block-start: 1.2em;
+    color: var(--searchresults-header-fg);
+}
+
+/* Paragraphs and lists */
+.content p,
+.content li {
+    font-size: 1.6rem;
+}
+.content p {
+    margin-block-start: 0;
+    margin-block-end: 1em;
+}
+.content ul,
+.content ol {
+    padding-inline-start: 1.8em;
+    margin-block-end: 1em;
+}
+.content li {
+    margin-block-end: 0.35em;
+}
+.content li > p {
+    margin-block-end: 0.5em;
+}
+
+/* Links. Underline on hover keeps the page calm while still feeling
+   responsive. */
+.content a:link,
+.content a:visited {
+    text-decoration: none;
+}
+.content a:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Blockquotes. Plain background tint, thin border, no italics. */
+.content blockquote {
+    background: var(--quote-bg);
+    border-inline-start: 3px solid var(--quote-border);
+    padding: 0.6em 1em;
+    margin: 1.2em 0;
+    color: var(--fg);
+}
+.content blockquote p {
+    margin: 0.2em 0;
+}
+
+/* Code. JetBrains Mono everywhere, ligatures off so == reads as = =. */
+code,
+pre,
+pre code,
+.hljs,
+.menu-title code {
+    font-family: "JetBrains Mono", "SF Mono", "Cascadia Code",
+        "Source Code Pro", Consolas, "Liberation Mono", monospace;
+    font-feature-settings: "liga" 0, "calt" 0;
+    font-variant-ligatures: none;
+}
+
+pre {
+    padding: 0.85em 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    line-height: 1.55;
+    font-size: 1.4rem;
+}
+
+/* Inline code chip. Subtle border so it reads as an identifier
+   without becoming a coloured tag. */
+.content :not(pre) > code {
+    color: var(--inline-code-color);
+    background: var(--quote-bg);
+    border: 1px solid var(--quote-border);
+    border-radius: 3px;
+    padding: 0 0.3em;
+    font-size: 0.88em;
+}
+
+/* Tables. Used heavily in the API reference. */
+.content table {
+    font-size: 1.5rem;
+    border-collapse: collapse;
+    margin: 1.4em 0;
+    width: 100%;
+}
+.content table th {
+    font-weight: 600;
+    text-align: left;
+    background: var(--table-header-bg);
+    padding: 0.5em 0.7em;
+    border: 1px solid var(--table-border-color);
+}
+.content table td {
+    padding: 0.5em 0.7em;
+    border: 1px solid var(--table-border-color);
+    vertical-align: top;
+}
+.content table tr:nth-child(2n) td {
+    background: var(--table-alternate-bg);
+}
+
+/* Horizontal rule. Lighter than mdBook's default so it does not slice
+   the page. */
+.content hr {
+    border: 0;
+    border-top: 1px solid var(--quote-border);
+    margin: 2.2em 0;
+}
+
+/* Sidebar. Geist with a calm 1.4 line-height. */
+.sidebar,
+.sidebar .chapter,
+.menu-title {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+}
+.sidebar .chapter {
+    font-size: 1.4rem;
+    line-height: 1.45;
+}
+.sidebar .chapter li.chapter-item {
+    padding: 0.18em 0;
+}
+.menu-title {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: 1.9rem;
+    letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 96;
+}
+
+/* SUMMARY part titles (`# Heading` lines in SUMMARY.md) read as
+   small uppercase labels above each section so the nav stays
+   scannable. */
+.chapter > .part-title {
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--searchresults-header-fg);
+    margin-block-start: 1.4em;
+    margin-block-end: 0.4em;
+    padding-inline-start: 0.6em;
+}
+
+/* Search */
+#searchbar,
+.searchbar-outer input {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-size: 1.45rem;
+}
+
+/* Active sidebar item gets a thin ember rule and the accent colour
+   without changing background. Reads as a calm pointer instead of a
+   highlight bar. */
+.chapter li.chapter-item.expanded > a.active,
+.chapter li.chapter-item > a.active {
+    color: var(--sidebar-active);
+    font-weight: 500;
+    border-inline-start: 2px solid var(--sidebar-active);
+    margin-inline-start: -2px;
+    padding-inline-start: 8px;
+}
+
+/* Print niceties */
+@media print {
+    html, body { background: white; color: black; }
+    .content { max-width: 100%; }
+    pre, code { font-size: 9pt; }
+    .content a:link,
+    .content a:visited { color: black; }
+}
+
+/* Small screens. Tighten the scale, drop max-width so the column
+   fills the viewport. */
+@media (max-width: 640px) {
+    body { font-size: 1.55rem; line-height: 1.55; }
+    .content h1 { font-size: 2.2rem; }
+    .content h2 { font-size: 1.7rem; }
+    .content h3 { font-size: 1.45rem; }
+    .content h4 { font-size: 1.25rem; }
+    .content table { font-size: 1.35rem; }
+}
