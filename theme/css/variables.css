@@ -1,0 +1,166 @@
+/*
+ * Vyrox brand palette overrides for mdBook.
+ *
+ * The brand defines two surfaces. Light mode uses the "bone" palette
+ * (warm cream paper, near-black ink) for daylight reading. Dark mode
+ * uses the "void" palette (near-black with warm ash borders) for
+ * low-light. Ember is the accent on both. Every value here traces back
+ * to the canonical palette in `product.md`.
+ *
+ * mdBook ships several built-in themes. We override only the variables
+ * we need; everything else falls through to the upstream defaults.
+ *
+ * Last verified against mdbook 0.5.x default CSS structure.
+ */
+
+/* -------------------------------------------------------------------
+ * Light mode (the "bone" surface). Default reading experience.
+ * ------------------------------------------------------------------- */
+.light {
+    /* Surfaces */
+    --bg: #f2ead8;                       /* bone */
+    --fg: #0e0a05;                       /* ink */
+    --sidebar-bg: #ece3cc;               /* linen, sunken */
+    --sidebar-fg: #2a2118;               /* graphite-dark */
+    --sidebar-non-existant: #b8a98a;     /* muted clay */
+    --sidebar-active: #e8462e;           /* ember */
+    --sidebar-spacer: #d6ccb0;
+    --scrollbar: #b8a98a;
+    --icons: #2a2118;
+    --icons-hover: #e8462e;
+    --links: #c93a25;                    /* darker ember for AA contrast on bone */
+    --inline-code-color: #0e0a05;
+
+    /* Theme color picker chips */
+    --theme-popup-bg: #f6f0e1;
+    --theme-popup-border: #c9bfa8;
+    --theme-hover: #ece3cc;
+
+    /* Tables */
+    --table-border-color: #c9bfa8;
+    --table-header-bg: #ece3cc;
+    --table-alternate-bg: #efe6d1;
+
+    /* Code blocks */
+    --quote-bg: #efe6d1;
+    --quote-border: #c9bfa8;
+
+    /* Search */
+    --searchbar-border-color: #c9bfa8;
+    --searchbar-bg: #f6f0e1;
+    --searchbar-fg: #0e0a05;
+    --searchbar-shadow-color: rgba(14, 10, 5, 0.12);
+    --searchresults-header-fg: #6b5e48;
+    --searchresults-border-color: #d6ccb0;
+    --searchresults-li-bg: #f6f0e1;
+    --search-mark-bg: #ffe6b0;
+}
+
+/* -------------------------------------------------------------------
+ * Dark mode (the "void" surface). Selected via "navy" preferred dark.
+ * ------------------------------------------------------------------- */
+.navy {
+    --bg: #050505;                       /* void */
+    --fg: #ece3cc;                       /* light bone on void */
+    --sidebar-bg: #0a0a0b;               /* pitch */
+    --sidebar-fg: #ece3cc;
+    --sidebar-non-existant: #6b5e48;
+    --sidebar-active: #ff6a3d;           /* ember-2 for brighter contrast on void */
+    --sidebar-spacer: #1f1f26;
+    --scrollbar: #1f1f26;
+    --icons: #c9bfa8;
+    --icons-hover: #ff6a3d;
+    --links: #ff9156;                    /* ember-3 for AA contrast on void */
+    --inline-code-color: #ffe6b0;        /* marrow */
+
+    --theme-popup-bg: #0a0a0b;
+    --theme-popup-border: #1f1f26;
+    --theme-hover: #14141a;
+
+    --table-border-color: #1f1f26;
+    --table-header-bg: #14141a;
+    --table-alternate-bg: #0e0e12;
+
+    --quote-bg: #0e0e12;
+    --quote-border: #1f1f26;
+
+    --searchbar-border-color: #1f1f26;
+    --searchbar-bg: #0a0a0b;
+    --searchbar-fg: #ece3cc;
+    --searchbar-shadow-color: rgba(232, 70, 46, 0.18);
+    --searchresults-header-fg: #c9bfa8;
+    --searchresults-border-color: #1f1f26;
+    --searchresults-li-bg: #0a0a0b;
+    --search-mark-bg: #8b2a12;           /* rust */
+}
+
+/* -------------------------------------------------------------------
+ * Code block colours. mdBook uses highlight.js styles; we override the
+ * background and a few token classes so syntax does not fight the
+ * surrounding text. Foreground tokens fall through to the default
+ * theme's palette where possible.
+ * ------------------------------------------------------------------- */
+.light pre,
+.light pre code,
+.light code {
+    background-color: #f6f0e1;
+    color: #0e0a05;
+}
+
+.navy pre,
+.navy pre code,
+.navy code {
+    background-color: #0a0a0b;
+    color: #ece3cc;
+}
+
+/* Inline code keeps a subtle border so it reads as a chip, not a tag. */
+.light :not(pre) > code {
+    border: 1px solid #d6ccb0;
+    border-radius: 2px;
+    padding: 0 4px;
+}
+.navy :not(pre) > code {
+    border: 1px solid #1f1f26;
+    border-radius: 2px;
+    padding: 0 4px;
+}
+
+/* -------------------------------------------------------------------
+ * Primary action accents. Buttons and the "edit this page" link pick
+ * up the ember accent so they read as the brand without overwhelming
+ * the reading surface.
+ * ------------------------------------------------------------------- */
+.light .nav-chapters,
+.light .nav-chapters:hover {
+    color: #c93a25;
+}
+.navy .nav-chapters,
+.navy .nav-chapters:hover {
+    color: #ff6a3d;
+}
+
+/* Active sidebar item gets a thin ember rule on the left so it reads
+   like a tactical status indicator rather than a coloured background. */
+.light .chapter li.chapter-item.expanded > a.active,
+.light .chapter li.chapter-item > a.active {
+    color: #c93a25;
+    border-left: 2px solid #e8462e;
+    padding-left: 8px;
+}
+.navy .chapter li.chapter-item.expanded > a.active,
+.navy .chapter li.chapter-item > a.active {
+    color: #ff6a3d;
+    border-left: 2px solid #ff6a3d;
+    padding-left: 8px;
+}
+
+/* Selection colour. Subtle ember tint, not bright. */
+.light ::selection {
+    background: rgba(232, 70, 46, 0.18);
+    color: #0e0a05;
+}
+.navy ::selection {
+    background: rgba(255, 106, 61, 0.32);
+    color: #ece3cc;
+}

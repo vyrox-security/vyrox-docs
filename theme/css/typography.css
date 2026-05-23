@@ -1,0 +1,202 @@
+/*
+ * Vyrox typography for the documentation site.
+ *
+ * Three families per the brand spec in product.md:
+ *
+ *   - Fraunces  (display / headings)  Variable serif, optical sizing
+ *   - Geist     (body)                Highly readable sans-serif
+ *   - JetBrains Mono (code, labels)   Industry-standard programming font
+ *
+ * All three are loaded via Google Fonts in the document head. The
+ * fallback chain prefers system serifs / sans for the unlikely case
+ * the Google Fonts CDN is blocked, and we deliberately avoid
+ * `system-ui` and `-apple-system` as the primary face because the
+ * brand spec rules them out and they produce inconsistent rendering
+ * across platforms.
+ *
+ * Type scale targets readable line lengths and a generous line-height
+ * so the dense technical prose stays approachable.
+ */
+
+/* Body */
+html,
+body,
+.content {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.65;
+    font-weight: 400;
+    letter-spacing: 0.001em;
+    /* `optical-sizing: auto` makes variable fonts render slightly
+       crisper at body sizes. Free perf win where supported. */
+    font-optical-sizing: auto;
+}
+
+/* Display headings */
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6,
+.menu-title {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.18;
+    font-optical-sizing: auto;
+    /* Variable-axis tweaks. `opsz 28` keeps the body-level headings
+       legible; the hero (h1) bumps to a larger optical size below. */
+    font-variation-settings: "opsz" 28, "SOFT" 0, "WONK" 0;
+}
+
+.content h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-top: 1.2rem;
+    margin-bottom: 1.6rem;
+    font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
+}
+.content h2 {
+    font-size: 1.7rem;
+    margin-top: 2.4rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--quote-border);
+}
+.content h3 {
+    font-size: 1.3rem;
+    margin-top: 1.8rem;
+    margin-bottom: 0.6rem;
+}
+.content h4 {
+    font-size: 1.1rem;
+    margin-top: 1.4rem;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+}
+
+/* Paragraphs and lists */
+.content p,
+.content li {
+    font-size: 1rem;
+    max-width: 72ch;     /* readable line length */
+}
+.content p {
+    margin-top: 0.6rem;
+    margin-bottom: 1rem;
+}
+.content li {
+    margin-bottom: 0.35rem;
+}
+.content ul,
+.content ol {
+    margin-top: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+/* Blockquotes — used for the project tagline and inline call-outs */
+.content blockquote {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    border-left: 3px solid var(--quote-border);
+    background: var(--quote-bg);
+    padding: 0.75rem 1.1rem;
+    margin: 1.2rem 0;
+    color: var(--fg);
+    opacity: 0.92;
+}
+.content blockquote p {
+    margin: 0.2rem 0;
+}
+
+/* Code */
+code,
+pre,
+pre code,
+.hljs {
+    font-family: "JetBrains Mono", "SF Mono", "Cascadia Code",
+        "Roboto Mono", Consolas, "Liberation Mono", monospace;
+    font-size: 0.92rem;
+    font-feature-settings: "liga" 0, "calt" 0;  /* disable ligatures so == reads as = = */
+    font-variant-ligatures: none;
+}
+pre {
+    padding: 0.9rem 1rem;
+    border-radius: 2px;
+    overflow-x: auto;
+    line-height: 1.55;
+}
+
+/* Tables — readable on dense API reference rows */
+.content table {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.95rem;
+    border-collapse: collapse;
+    margin: 1.2rem 0;
+    width: 100%;
+}
+.content table th {
+    font-weight: 600;
+    text-align: left;
+    background: var(--table-header-bg);
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--table-border-color);
+}
+.content table td {
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--table-border-color);
+    vertical-align: top;
+}
+.content table tr:nth-child(2n) td {
+    background: var(--table-alternate-bg);
+}
+
+/* Sidebar nav and menu titles */
+.sidebar,
+.sidebar .chapter,
+.menu-title {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+}
+.sidebar .chapter {
+    font-size: 0.96rem;
+    line-height: 1.4;
+}
+.menu-title {
+    font-weight: 600;
+    letter-spacing: -0.005em;
+}
+
+/* Top nav (part titles defined by `# Part title` in SUMMARY.md) */
+.chapter > .part-title {
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--searchresults-header-fg);
+    margin-top: 1.25rem;
+    margin-bottom: 0.4rem;
+}
+
+/* Search results */
+.searchbar-outer input,
+#searchbar {
+    font-family: "Geist", "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.95rem;
+}
+
+/* Footer/print niceties */
+@media print {
+    html, body { background: white; color: black; }
+    pre, code { font-size: 9pt; }
+}
+
+/* Smaller screens. Keep readable line length but tighten the scale. */
+@media (max-width: 640px) {
+    html, body, .content { font-size: 15.5px; line-height: 1.6; }
+    .content h1 { font-size: 1.95rem; }
+    .content h2 { font-size: 1.45rem; }
+    .content h3 { font-size: 1.18rem; }
+    .content p, .content li { max-width: none; }
+}

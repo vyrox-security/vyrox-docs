@@ -1,145 +1,72 @@
-# Vyrox Documentation Justfile
-# =====================================================================
-# Production-grade task runner for documentation.
-# Public docs: ARCHITECTURE.md, API_REFERENCE.md, QUICKSTART.md
+# Vyrox Documentation task runner.
 #
-# The docs site can be served as static HTML (index.html) or as
-# markdown files. Both are maintained in sync.
+# The docs site is an mdBook compiled from the top-level Markdown
+# files. `book.toml` is the configuration, `src/SUMMARY.md` is the
+# chapter order, and `theme/` holds the brand CSS and the Google
+# Fonts loader. The actual `mdbook build` invocation lives in
+# `scripts/build.sh` so Cloudflare Pages can call it directly.
 #
 # Usage:
-#   just              # Show all commands
-#   just <command>   # Run specific command
-# =====================================================================
+#   just                 list every recipe
+#   just build           produce ./book/
+#   just serve           local preview on http://localhost:3000
+#   just lint            line-length, trailing whitespace, broken links
+#   just clean           remove ./book/ and the local mdbook cache
 
-set shell := ["zsh", "-cu"]
-
-# =====================================================================
-# DEFAULT
-# =====================================================================
+set shell := ["bash", "-cu"]
 
 default:
     @just --list
 
-# =====================================================================
-# DOCUMENTATION
-# =====================================================================
-
-# View ARCHITECTURE.md
-view-architecture:
-    @cat ARCHITECTURE.md
-
-# View API reference
-view-api:
-    @cat API_REFERENCE.md
-
-# View quickstart
-view-quickstart:
-    @cat QUICKSTART.md
-
-# View all docs
-view-all:
-    @echo "=== ARCHITECTURE.md ==="
-    @cat ARCHITECTURE.md
-    @echo ""
-    @echo "=== API_REFERENCE.md ==="
-    @cat API_REFERENCE.md
-    @echo ""
-    @echo "=== QUICKSTART.md ==="
-    @cat QUICKSTART.md
-
-# =====================================================================
-# LINK CHECKING
-# =====================================================================
-
-# Check for broken links (requires markdown-link-check)
-check-links:
-    @echo "Checking markdown links..."
-    @grep -rh "\[.*\](.*\.md)" . --include="*.md" | grep -v "^\s*#" | while read line; do target=$(echo "$line" | sed 's/.*](\([^)]*\)).*/\1/'); if [ -n "$target" ] && [ ! -f "$target" ]; then echo "Broken link: $target"; fi; done || true
-
-# =====================================================================
-# LINTING
-# =====================================================================
-
-# Lint markdown files
-lint:
-    @echo "Linting markdown files..."
-    @for f in *.md; do if [ -f "$f" ]; then echo "Checking $f..."; grep -n "[[:space:]]$" "$f" || true; grep -En "\]\([a-zA-Z_]*\.md\)" "$f" | while read line; do file=$(echo "$line" | sed 's/:.*//'); link=$(echo "$line" | sed 's/.*](\([^)]*\)).*/\1/'); if [ ! -f "$link" ]; then echo "$file: broken link [$link]"; fi; done; fi; done
-
-# Check for TODO markers
-check-todos:
-    @grep -rn "TODO\|FIXME\|XXX\|HACK" . --include="*.md" || echo "No TODOs found"
-
-# =====================================================================
-# FORMATTING
-# =====================================================================
-
-# Format markdown (basic cleanup)
-format:
-    @echo "Formatting markdown files..."
-    @for f in *.md; do if [ -f "$f" ]; then sed -i 's/[[:space:]]*$//' "$f"; perl -i -pe 's/\n*\z/\n/' "$f"; fi; done
-
-# =====================================================================
-# WORD COUNT
-# =====================================================================
-
-# Count words in documentation
-words:
-    @echo "Word count by file:"; @for f in *.md; do if [ -f "$f" ]; then echo "  $f: $(wc -w < "$f") words"; fi; done; echo ""; echo "Total: $(cat *.md | wc -w) words"
-
-# Line count
-lines:
-    @echo "Line count by file:"; @for f in *.md; do if [ -f "$f" ]; then echo "  $f: $(wc -l < "$f") lines"; fi; done
-
-# =====================================================================
-# WEBSITE
-# =====================================================================
-
-# Serve the documentation website locally
-serve:
-    @echo "Starting local docs server..."
-    @npx serve . -l 3000
-
-# Serve with live reload
-dev:
-    @echo "Starting development server with live reload..."
-    @npx serve . -l 3000 -c -1
-
-# Build the static site (for deployment)
+# Build the static site into ./book/. Idempotent.
 build:
-    @echo "Building static site..."
-    @if [ -f index.html ]; then \
-        echo "index.html exists - static site ready"; \
-    else \
-        echo "No index.html found - run 'just website' first"; \
-    fi
+    bash scripts/build.sh
 
-# Validate website HTML
-validate:
-    @echo "Validating HTML..."
-    @grep -c "<!DOCTYPE html>" index.html || echo "WARNING: index.html not found or missing DOCTYPE"
-    @grep -c "<html" index.html || echo "WARNING: no html tag found"
+# Serve with mdbook's own watch+livereload. Edits to src/ or top-level
+# files trigger a rebuild and a browser refresh.
+serve:
+    mdbook serve --open
 
-# =====================================================================
-# CLEANUP
-# =====================================================================
+# Quick lint pass: trailing whitespace, em-dashes (house style), and
+# Markdown links that target a missing file. Exits non-zero on hits.
+lint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    fail=0
+    for f in *.md; do
+        if grep -nE "[[:space:]]+$" "$f" >/dev/null; then
+            echo "[lint] trailing whitespace in $f:" && grep -nE "[[:space:]]+$" "$f"
+            fail=1
+        fi
+        if grep -nE "[—–]" "$f" >/dev/null; then
+            echo "[lint] em or en dash in $f (house style is plain ASCII):"
+            grep -nE "[—–]" "$f"
+            fail=1
+        fi
+    done
+    exit $fail
 
-# Clean temporary files
+# Run a strict broken-link check across the public Markdown files.
+links:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for f in *.md; do
+        grep -oE "\]\([A-Z_]+\.md\)" "$f" 2>/dev/null \
+            | sed -E "s/\]\(([A-Z_]+\.md)\)/\1/" | sort -u \
+            | while read target; do
+                if [[ ! -f "$target" ]]; then
+                    echo "[links] $f references missing chapter: $target"
+                fi
+            done
+    done
+
+# Word and line counts per chapter. Useful for tracking doc growth.
+stats:
+    @for f in *.md; do printf "%-22s %5d lines  %6d words\n" "$f" "$(wc -l < $f)" "$(wc -w < $f)"; done
+
+# Remove the build output and the local mdbook binary cache.
 clean:
-    rm -f *.tmp
-    rm -f *~
+    rm -rf book/ .mdbook-bin/
 
-# =====================================================================
-# CI/CD
-# =====================================================================
-
-# Check docs for CI
-ci:
-    just lint
-    just check-todos
-
-# =====================================================================
-# HELP
-# =====================================================================
-
-help:
-    @just --list --unsorted
+# Run lint + links. Mirrored by CI.
+ci: lint links

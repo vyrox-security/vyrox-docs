@@ -1,0 +1,25 @@
+<!--
+  Custom <head> hook for the Vyrox docs site.
+
+  Loads the three brand typefaces (Fraunces, Geist, JetBrains Mono)
+  from Google Fonts with `display=swap` so the layout never blocks on
+  the font request, and preconnects to the font CDNs to shave the
+  initial-paint latency.
+
+  Fonts:
+    Fraunces        Variable serif, used for headings. We request the
+                    optical-size, soft, and wonk axes so the headings
+                    can use the editorial italics from product.md.
+    Geist           Body. Five weights (300, 400, 500, 600, 700).
+    JetBrains Mono  Code. Four weights (400, 500, 600, 700).
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+
+<meta name="theme-color" content="#050505">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Vyrox Security engineering documentation. Architecture, API contracts, threat model, audit-log spec, EDR adapter guide.">
