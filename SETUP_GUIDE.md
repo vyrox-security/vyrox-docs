@@ -69,7 +69,7 @@ EDR (CrowdStrike/SentinelOne)
    - Managed Redis: any Redis 6+ compatible provider works
 
 3. **LLM provider credentials**
-   - Vyrox supports OpenAI-compatible APIs (OpenAI, Anthropic, or any OpenRouter-compatible endpoint)
+   - Vyrox supports OpenAI-compatible APIs (OpenAI, Anthropic, or any OpenAI-compatible endpoint)
    - Configure the model via `LLM_MODEL` and the endpoint via `LLM_BASE_URL`
 
 ### Optional (for real EDR integration)
@@ -173,14 +173,14 @@ VYROX_HMAC_SECRET=YOUR_64_CHAR_HEX_HERE
 # =====================================================================
 # Redis
 # =====================================================================
-UPSTASH_REDIS_REST_URL=redis://localhost:6379
-UPSTASH_REDIS_REST_TOKEN=
+REDIS_URL=redis://localhost:6379
 
 # =====================================================================
-# OpenRouter (LLM)
+# LLM Provider (any OpenAI-compatible endpoint)
 # =====================================================================
-OPENROUTER_API_KEY=sk-or-v1-YOUR_KEY_HERE
-OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free
+OPENCODE_ZEN_API_KEY=YOUR_LLM_API_KEY_HERE
+LLM_BASE_URL=https://your-openai-compatible-endpoint/v1
+LLM_MODEL=YOUR_MODEL_NAME
 
 # =====================================================================
 # SQLite Database

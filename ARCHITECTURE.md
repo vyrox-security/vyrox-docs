@@ -329,7 +329,7 @@ know about:
 | Variable | Component | Purpose |
 |---|---|---|
 | `VYROX_HMAC_SECRET` | all | Sixty four hex characters. Signs Python ↔ Python and Python ↔ Rust traffic. |
-| `REDIS_URL` | ingestion, worker | `redis://` or `rediss://` URL. The legacy Upstash REST variables are still accepted for backward compatibility but new deployments should set this. |
+| `REDIS_URL` | ingestion, worker | `redis://` or `rediss://` URL. The legacy REST-style Redis variables are still accepted for backward compatibility but new deployments should set this. |
 | `OPENCODE_ZEN_API_KEY` | worker | LLM provider key. Empty falls back to the legacy `OPENROUTER_API_KEY` during the migration window. |
 | `DISCORD_BOT_TOKEN` | bot | Discord application token. |
 | `DISCORD_PUBLIC_KEY` | bot | Application public key for interaction Ed25519 verification. Empty skips verification (local dev only). |

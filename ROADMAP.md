@@ -60,7 +60,7 @@ sixteen blocker items that all shipped between 2026-05-21 and
 - `.env.example` rewritten with logical sections and every new
   variable documented.
 - `Settings.effective_redis_url()` resolves the canonical `REDIS_URL`
-  first and falls back to the legacy Upstash REST variables. The
+  first and falls back to the legacy REST-style Redis variables. The
   worker refuses to start with no Redis URL.
 
 ## In flight
