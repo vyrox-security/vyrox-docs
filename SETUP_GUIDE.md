@@ -533,7 +533,7 @@ With real EDR credentials, the system handles:
 ## Contacts & Support
 
 - **Docs:** https://docs.vyrox.dev
-- **Security:** sec.vyrox@proton.me
+- **Security:** security@vyrox.dev
 - **GitHub:** https://github.com/vyrox-security/vyrox
 
 ---

@@ -3,12 +3,12 @@
 This document tells you how to report a vulnerability to Vyrox, what we
 will do with the report, what is in scope and what is not, and which
 properties of the system we consider security invariants. If you read
-nothing else, the contact is `sec.vyrox@proton.me` and the PGP key is at
+nothing else, the contact is `security@vyrox.dev` and the PGP key is at
 `vyrox.dev/.well-known/pgp-key.txt`.
 
 ## Reporting
 
-Send the report to `sec.vyrox@proton.me`. Subject line `SECURITY: <one
+Send the report to `security@vyrox.dev`. Subject line `SECURITY: <one
 line description>`. PGP-encrypt the body if the finding is sensitive;
 the key is published at `vyrox.dev/.well-known/pgp-key.txt`.
 
@@ -139,7 +139,7 @@ conversation to private if it turns out to be sensitive.
 
 ## Maintainer contact
 
-`sec.vyrox@proton.me` is monitored by the founder and one engineer.
+`security@vyrox.dev` is monitored by the founder and one engineer.
 Replies come from the same address. We do not respond from personal
 accounts, and we do not ask reporters to contact us through DMs on
 social platforms.

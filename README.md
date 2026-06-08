@@ -139,7 +139,7 @@ What "alpha" means in practice:
 
 ## Security contact
 
-`sec.vyrox@proton.me`, PGP key at
+`security@vyrox.dev`, PGP key at
 [`vyrox.dev/.well-known/pgp-key.txt`](https://vyrox.dev/.well-known/pgp-key.txt).
 Acknowledgement within forty-eight hours. Full policy in
 [`SECURITY.md`](SECURITY.md). Please do not file vulnerabilities as
