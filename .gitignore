@@ -20,3 +20,14 @@ book/
 # committed. The only file in src/ that is tracked is SUMMARY.md.
 src/*.md
 !src/SUMMARY.md
+# Local tooling and editor config (not committed)
+CLAUDE.md
+.claude/
+AGENTS.md
+GEMINI.md
+.cursor/
+.cursorrules
+.aider*
+.gstack/
+.mcp.json
+.claude.json
