@@ -96,3 +96,48 @@ html:not(.js) {
 #theme-list {
     display: none !important;
 }
+
+/*
+ * Top-right menu bar icons (print, GitHub, edit-this-page).
+ *
+ * Make the icon set visually obvious. The default mdBook chrome
+ * renders them as faded grey glyphs that disappear into the menu
+ * bar background, especially on the dark surface. Three changes:
+ *
+ *   1. Force the visible state to use `--icons` (bone on void) so
+ *      the SVGs read at first glance.
+ *   2. Bring the GitHub icon up to full opacity even when the rest
+ *      of the bar is at the resting low-attention shade. This is
+ *      the primary "view source" action and should be findable.
+ *   3. Hover state ramps to the ember accent so the link feels
+ *      interactive instead of decorative.
+ */
+.right-buttons a {
+    color: var(--icons);
+    opacity: 1;
+    transition: color 0.15s ease;
+}
+
+.right-buttons a:hover,
+.right-buttons a:focus-visible {
+    color: var(--icons-hover);
+}
+
+/*
+ * The GitHub link is the second of the three icons in the right
+ * buttons cluster. Highlight it slightly so a reader scanning for
+ * "where is the source" lands on it without hunting.
+ */
+.right-buttons a[title="Git repository"] {
+    color: #ff9156;
+}
+.right-buttons a[title="Git repository"]:hover {
+    color: #ffb38b;
+}
+.right-buttons a[title="Git repository"] .fa-svg {
+    /* slightly larger so the GitHub mark reads at the same weight
+       as the print and edit glyphs even though its bounding box is
+       wider in the FontAwesome path data */
+    transform: scale(1.05);
+    transform-origin: center;
+}
