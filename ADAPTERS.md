@@ -107,7 +107,7 @@ Your adapter MUST produce one. Three constraints:
   buttons.
 
 Missing optional fields default to `None` or empty string. Never to a
-placeholder like `"unknown"` — the triage engine treats `None` and
+placeholder like `"unknown"`, the triage engine treats `None` and
 `"unknown"` differently.
 
 ## What `NormalizedAlert` looks like

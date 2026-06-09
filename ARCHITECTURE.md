@@ -14,38 +14,38 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
 
 ```
    EDR vendors                                   Vyrox platform
-                                                                                                   
-  CrowdStrike Falcon  ─┐                                                                           
-  SentinelOne          ├─▶  POST /webhook/{vendor}  ─▶  Ingestion (FastAPI)                        
-  Defender Graph       │      HMAC or bearer auth          │                                       
-  Generic JSON         ─┘      per-tenant secret           ▼                                       
-                                                  NormalizedAlert  ─▶ Redis  LPUSH/RPOP            
-                                                                          │   vyrox:alerts:{tid}   
-                                                                          ▼                        
-                                              Worker (asyncio)                                     
-                                                                                                   
-                                              1. Cache lookup     (24h TTL by alert fingerprint)   
-                                              2. Heuristics       (Noisy OR, <5ms)                 
-                                                                  ├─ confidence ≥ 0.75 ▶ accept  
-                                                                  ├─ confidence ≤ 0.25 ▶ BENIGN  
-                                                                  └─ otherwise ▶ LLM             
-                                              3. LLM fallback     (primary + 2 fallback models)    
-                                                                  + Pydantic schema validation     
-                                                                  + per-tenant daily token budget   
-                                              4. Persist          (SQLite, tenant-scoped tables)   
-                                              5. Notify           (signed HTTP to bot)             
-                                                                                                   
-                                              Discord bot (FastAPI)                                
-                                              ├─ /interactions  (Ed25519 verified)                 
-                                              ├─ /webhook       (HMAC verified)                    
-                                              └─ approval flow  ▶ Rust proxy                       
-                                                                                                   
-                                              Rust proxy                                           
-                                              ├─ HMAC verify       (constant time)                 
-                                              ├─ replay window     (±30s)                          
-                                              ├─ nonce dedup       (DashMap, 10min retention)      
-                                              ├─ audit append      (hash-chained JSONL)            
-                                              └─ EDR API call      (or DRY_RUN short-circuit)      
+
+  CrowdStrike Falcon  ─┐
+  SentinelOne          ├─▶  POST /webhook/{vendor}  ─▶  Ingestion (FastAPI)
+  Defender Graph       │      HMAC or bearer auth          │
+  Generic JSON         ─┘      per-tenant secret           ▼
+                                                  NormalizedAlert  ─▶ Redis  LPUSH/RPOP
+                                                                          │   vyrox:alerts:{tid}
+                                                                          ▼
+                                              Worker (asyncio)
+
+                                              1. Cache lookup     (24h TTL by alert fingerprint)
+                                              2. Heuristics       (Noisy OR, <5ms)
+                                                                  ├─ confidence ≥ 0.75 ▶ accept
+                                                                  ├─ confidence ≤ 0.25 ▶ BENIGN
+                                                                  └─ otherwise ▶ LLM
+                                              3. LLM fallback     (primary + 2 fallback models)
+                                                                  + Pydantic schema validation
+                                                                  + per-tenant daily token budget
+                                              4. Persist          (SQLite, tenant-scoped tables)
+                                              5. Notify           (signed HTTP to bot)
+
+                                              Discord bot (FastAPI)
+                                              ├─ /interactions  (Ed25519 verified)
+                                              ├─ /webhook       (HMAC verified)
+                                              └─ approval flow  ▶ Rust proxy
+
+                                              Rust proxy
+                                              ├─ HMAC verify       (constant time)
+                                              ├─ replay window     (±30s)
+                                              ├─ nonce dedup       (DashMap, 10min retention)
+                                              ├─ audit append      (hash-chained JSONL)
+                                              └─ EDR API call      (or DRY_RUN short-circuit)
 ```
 
 All five services are independent processes. They communicate over HTTP

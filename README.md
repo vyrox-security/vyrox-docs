@@ -1,10 +1,11 @@
 # Vyrox Security
 
-> AI security copilot for teams without a dedicated SOC. Ingests EDR alerts,
-> triages them through a deterministic heuristics engine and an LLM fallback,
-> and routes the verdicts that matter to a human approver in Discord. Every
-> containment action runs through a small Rust proxy that the customer can
-> read and audit.
+> The auditable action layer for your EDR alerts. Vyrox ingests alerts, triages
+> them through a deterministic heuristics engine with an LLM fallback, routes the
+> verdicts that matter to a human approver, and runs every containment action
+> through a small Rust proxy you can read and audit, with a tamper-evident,
+> SHA-256-chained log you own. Built for teams and MSSPs that have the alerts but
+> not a 24/7 SOC.
 
 [![License: MIT (proxy)](https://img.shields.io/badge/proxy-MIT-green?style=flat-square)](https://github.com/vyrox-security/vyrox-proxy/blob/main/LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange?style=flat-square)](#status)
@@ -138,7 +139,7 @@ What "alpha" means in practice:
 
 ## Security contact
 
-`sec.vyrox@proton.me`, PGP key at
+`security@vyrox.dev`, PGP key at
 [`vyrox.dev/.well-known/pgp-key.txt`](https://vyrox.dev/.well-known/pgp-key.txt).
 Acknowledgement within forty-eight hours. Full policy in
 [`SECURITY.md`](SECURITY.md). Please do not file vulnerabilities as
@@ -152,4 +153,4 @@ public GitHub issues.
 
 ---
 
-*Vyrox Security, Inc. — hello@vyrox.dev*
+*Vyrox Security, Inc., hello@vyrox.dev*

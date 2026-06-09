@@ -5,7 +5,7 @@ hitting a local proxy. About ten minutes. No customer-side
 credentials. No EDR account. Nothing leaves your machine.
 
 If you are an operator integrating a real EDR, see the design partner
-playbook — your company contact has the link. The public docs cover
+playbook, your company contact has the link. The public docs cover
 the open path only.
 
 ## What you need
