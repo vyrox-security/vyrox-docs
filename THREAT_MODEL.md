@@ -14,18 +14,18 @@ and the residual risks we have accepted.
 
 ```
    public internet                                   private network
-                                                                              
-   EDR vendors  ──── webhooks ────────▶  ingestion   ────▶  Redis             
-                                              │                                
-                                              └────────▶  SQLite              
-                                                              ▲                
-   Discord  ──── interactions ──────────▶  bot   ────────────┘                
-                                              │                                
+
+   EDR vendors  ──── webhooks ────────▶  ingestion   ────▶  Redis
+                                              │
+                                              └────────▶  SQLite
+                                                              ▲
+   Discord  ──── interactions ──────────▶  bot   ────────────┘
+                                              │
                                               └──── HMAC-signed ──▶  Rust proxy
-                                                                          │    
-                                                                          ▼    
-                                                                    EDR vendor 
-                                                                    APIs       
+                                                                          │
+                                                                          ▼
+                                                                    EDR vendor
+                                                                    APIs
 ```
 
 Boundaries that matter:

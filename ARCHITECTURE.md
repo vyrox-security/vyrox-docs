@@ -14,38 +14,38 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
 
 ```
    EDR vendors                                   Vyrox platform
-                                                                                                   
-  CrowdStrike Falcon  ─┐                                                                           
-  SentinelOne          ├─▶  POST /webhook/{vendor}  ─▶  Ingestion (FastAPI)                        
-  Defender Graph       │      HMAC or bearer auth          │                                       
-  Generic JSON         ─┘      per-tenant secret           ▼                                       
-                                                  NormalizedAlert  ─▶ Redis  LPUSH/RPOP            
-                                                                          │   vyrox:alerts:{tid}   
-                                                                          ▼                        
-                                              Worker (asyncio)                                     
-                                                                                                   
-                                              1. Cache lookup     (24h TTL by alert fingerprint)   
-                                              2. Heuristics       (Noisy OR, <5ms)                 
-                                                                  ├─ confidence ≥ 0.75 ▶ accept  
-                                                                  ├─ confidence ≤ 0.25 ▶ BENIGN  
-                                                                  └─ otherwise ▶ LLM             
-                                              3. LLM fallback     (primary + 2 fallback models)    
-                                                                  + Pydantic schema validation     
-                                                                  + per-tenant daily token budget   
-                                              4. Persist          (SQLite, tenant-scoped tables)   
-                                              5. Notify           (signed HTTP to bot)             
-                                                                                                   
-                                              Discord bot (FastAPI)                                
-                                              ├─ /interactions  (Ed25519 verified)                 
-                                              ├─ /webhook       (HMAC verified)                    
-                                              └─ approval flow  ▶ Rust proxy                       
-                                                                                                   
-                                              Rust proxy                                           
-                                              ├─ HMAC verify       (constant time)                 
-                                              ├─ replay window     (±30s)                          
-                                              ├─ nonce dedup       (DashMap, 10min retention)      
-                                              ├─ audit append      (hash-chained JSONL)            
-                                              └─ EDR API call      (or DRY_RUN short-circuit)      
+
+  CrowdStrike Falcon  ─┐
+  SentinelOne          ├─▶  POST /webhook/{vendor}  ─▶  Ingestion (FastAPI)
+  Defender Graph       │      HMAC or bearer auth          │
+  Generic JSON         ─┘      per-tenant secret           ▼
+                                                  NormalizedAlert  ─▶ Redis  LPUSH/RPOP
+                                                                          │   vyrox:alerts:{tid}
+                                                                          ▼
+                                              Worker (asyncio)
+
+                                              1. Cache lookup     (24h TTL by alert fingerprint)
+                                              2. Heuristics       (Noisy OR, <5ms)
+                                                                  ├─ confidence ≥ 0.75 ▶ accept
+                                                                  ├─ confidence ≤ 0.25 ▶ BENIGN
+                                                                  └─ otherwise ▶ LLM
+                                              3. LLM fallback     (primary + 2 fallback models)
+                                                                  + Pydantic schema validation
+                                                                  + per-tenant daily token budget
+                                              4. Persist          (SQLite, tenant-scoped tables)
+                                              5. Notify           (signed HTTP to bot)
+
+                                              Discord bot (FastAPI)
+                                              ├─ /interactions  (Ed25519 verified)
+                                              ├─ /webhook       (HMAC verified)
+                                              └─ approval flow  ▶ Rust proxy
+
+                                              Rust proxy
+                                              ├─ HMAC verify       (constant time)
+                                              ├─ replay window     (±30s)
+                                              ├─ nonce dedup       (DashMap, 10min retention)
+                                              ├─ audit append      (hash-chained JSONL)
+                                              └─ EDR API call      (or DRY_RUN short-circuit)
 ```
 
 All five services are independent processes. They communicate over HTTP
@@ -329,7 +329,7 @@ know about:
 | Variable | Component | Purpose |
 |---|---|---|
 | `VYROX_HMAC_SECRET` | all | Sixty four hex characters. Signs Python ↔ Python and Python ↔ Rust traffic. |
-| `REDIS_URL` | ingestion, worker | `redis://` or `rediss://` URL. The legacy Upstash REST variables are still accepted for backward compatibility but new deployments should set this. |
+| `REDIS_URL` | ingestion, worker | `redis://` or `rediss://` URL. The legacy REST-style Redis variables are still accepted for backward compatibility but new deployments should set this. |
 | `OPENCODE_ZEN_API_KEY` | worker | LLM provider key. Empty falls back to the legacy `OPENROUTER_API_KEY` during the migration window. |
 | `DISCORD_BOT_TOKEN` | bot | Discord application token. |
 | `DISCORD_PUBLIC_KEY` | bot | Application public key for interaction Ed25519 verification. Empty skips verification (local dev only). |
