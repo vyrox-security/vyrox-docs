@@ -149,7 +149,7 @@ public GitHub issues.
 
 `vyrox-proxy` and `vyrox-simulator` are MIT licensed.
 
-`vyrox-docs`, `vyrox-landing`, `vyrox-heuristics`, `vyrox-deploy`, `vyrox-design-partners`, and the `vyrox` monorepo are proprietary.
+`vyrox-docs`, `vyrox-www`, `vyrox-heuristics`, `vyrox-deploy`, `vyrox-design-partners`, and the `vyrox` monorepo are proprietary.
 
 ---
 
