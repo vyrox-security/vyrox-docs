@@ -126,8 +126,8 @@ Other in-flight items that touch public contracts:
 Public-facing items only. The internal product roadmap covers more.
 
 - **Programmatic API.** A REST API for tenants to fetch verdicts,
-  audit entries, and statistics outside of Discord. OAuth2 client
-  credentials per tenant. Prerequisite for MSP integrations.
+  audit entries, and statistics outside the operational console. OAuth2
+  client credentials per tenant. Prerequisite for MSP integrations.
 - **Standalone verifier package.** The bundled per-pack verify script
   (v0.2.0, above) extracted into a pip-installable package with a
   published pack schema and an explicit compatibility policy. A static

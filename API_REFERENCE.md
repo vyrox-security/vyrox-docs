@@ -336,7 +336,7 @@ Body:
 | `alert_id` | string | The alert that triggered the action. |
 | `action_type` | enum | `HOST_ISOLATION`, `PROCESS_KILL`, or `NETWORK_QUARANTINE`. |
 | `host` | string | Vendor-specific host identifier. CrowdStrike uses device IDs. |
-| `approved_by` | string | Discord username that clicked Approve. |
+| `approved_by` | string | Identifier of the human who approved the action (console user, or notifier username such as the Discord bot's). |
 | `approved_at` | int | Unix epoch seconds. Must fall in the replay window. |
 
 Responses:

@@ -54,7 +54,8 @@ In scope across every repository in the Vyrox organisation:
   A read, write, or signal tenant B.
 - Audit log tampering. Anything that breaks the hash chain without
   detection. See [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md) for the format.
-- Containment action execution without a Discord human approval click.
+- Containment action execution without a human approval action (in the
+  operational console or via a notifier such as the Discord bot).
 - HMAC verification weaknesses. Timing channels, prefix confusion,
   malleability in the canonical JSON used by Python `↔` Rust signing.
 - Replay attacks within the thirty second window on the proxy.
@@ -91,7 +92,8 @@ shortest reasonable embargo.
 3. HMAC verification on the raw bytes, before any parse, in constant
    time.
 4. No path from LLM output or worker logic to a containment call. Only
-   a Discord button click reaches the proxy.
+   a human approval action reaches the proxy (today via the Discord bot's
+   approval handler; the operational console is the surface as it lands).
 5. `DRY_RUN=true` by default in the proxy. Production opts in.
 6. LLM output passes Pydantic validation before any field is read.
 

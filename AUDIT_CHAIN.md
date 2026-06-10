@@ -59,7 +59,7 @@ contrast, is order-dependent and uses canonical JSON. See
 | `tenant_id` | string | Multi-tenant scope. Required. |
 | `action_type` | string | One of `HOST_ISOLATION`, `PROCESS_KILL`, `NETWORK_QUARANTINE`. Stored as `Debug` format of the Rust enum. |
 | `host` | string | Vendor-side host identifier. Opaque to the audit log. |
-| `approved_by` | string | Discord username including discriminator. |
+| `approved_by` | string | Identifier of the human who approved the action: a console user, or a notifier username such as the Discord bot's (including discriminator). |
 | `dry_run` | bool | `true` when `DRY_RUN` was active and no real EDR call was made. |
 | `previous_hash` | string | 64 lowercase hex characters. Genesis sentinel for the first entry of the very first file. |
 | `hash` | string | 64 lowercase hex characters. SHA-256 of `previous_hash || "|" || canonical_json(payload)`. See below. |

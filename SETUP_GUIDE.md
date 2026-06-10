@@ -13,8 +13,10 @@ This guide walks through setting up Vyrox for a live B2B demo with a design part
 
 1. EDR alert ingestion (simulated or real CrowdStrike/SentinelOne)
 2. AI-powered triage (heuristics + LLM fallback)
-3. Discord approval workflow (CRITICAL/HIGH alerts surface in Discord)
+3. Human approval workflow (CRITICAL/HIGH alerts surface for a human to Approve/Deny/Investigate)
 4. Containment proxy (human-approved action execution)
+
+> **Surface note.** The product surface is the web operational console (see [`ROADMAP.md`](ROADMAP.md)); Discord is an optional notifier. This demo guide documents the Discord bot path because that is the approval path that ships today, ahead of the console. Where this guide says "Discord," read it as "the current notifier/approval path," not as the product's primary interface.
 
 **Time to demo-ready:** ~30 minutes with real credentials, ~10 minutes with simulated alerts only.
 
