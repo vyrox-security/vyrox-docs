@@ -32,13 +32,16 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
                                               3. LLM fallback     (primary + 2 fallback models)
                                                                   + Pydantic schema validation
                                                                   + per-tenant daily token budget
-                                              4. Persist          (SQLite, tenant-scoped tables)
-                                              5. Notify           (signed HTTP to bot)
+                                              4. Persist          (tenant-scoped tables)
+                                              5. Surface          (operational console; optional notifier)
 
-                                              Discord bot (FastAPI)
-                                              ├─ /interactions  (Ed25519 verified)
-                                              ├─ /webhook       (HMAC verified)
-                                              └─ approval flow  ▶ Rust proxy
+                                              Operational console (FastAPI + web apps)
+                                              ├─ operator console  (Supabase auth)
+                                              ├─ super-admin app   (founder)
+                                              └─ approval flow  ▶ shared.approval_service ▶ Rust proxy
+
+                                              Optional notifier (e.g. Discord bot)
+                                              └─ approval flow  ▶ shared.approval_service ▶ Rust proxy
 
                                               Rust proxy
                                               ├─ HMAC verify       (constant time)
@@ -48,19 +51,20 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
                                               └─ EDR API call      (or DRY_RUN short-circuit)
 ```
 
-All five services are independent processes. They communicate over HTTP
-and Redis only. There is no shared in-process state across services. The
-SQLite database is shared between the worker and the Discord bot in the
-current pilot deployment. A future Postgres migration is tracked in
-`todo.md` (private) before tenant count reaches twenty five.
+The services are independent processes. They communicate over HTTP and
+Redis only. There is no shared in-process state across services. The
+worker, the console API, and any optional notifier share one database; the
+production deployment is Postgres, addressed by `DATABASE_URL`, with the
+console API in front.
 
 ## Components
 
 | Component | Language | Process | What it owns |
 |---|---|---|---|
 | Ingestion | Python, FastAPI | `uvicorn ingestion.main:app` | Webhook auth, vendor payload normalisation, Redis enqueue |
-| Worker | Python, asyncio | `python -m worker.main` | Triage pipeline, persistence, Discord notification |
-| Discord bot | Python, FastAPI | `uvicorn discord_bot.main:app` | Interaction handling, approval flow, signing toward the proxy |
+| Worker | Python, asyncio | `python -m worker.main` | Triage pipeline, persistence, surfacing alerts |
+| Console API | Python, FastAPI | `uvicorn console.main:app` | The product surface: operator + super-admin endpoints, approval flow via `shared.approval_service` |
+| Optional notifier | Python, FastAPI | `uvicorn discord_bot.main:app` | Retired surface kept as a notifier; approval flow via the same `shared.approval_service` |
 | Containment proxy | Rust, Axum | `vyrox-proxy` | HMAC verify, replay window, nonce dedup, audit, EDR API call |
 | Heuristics engine | Python | imported by the worker | Pattern matching, Noisy OR aggregation |
 
@@ -137,21 +141,23 @@ The LLM cannot trigger a containment action. The heuristics engine
 cannot trigger a containment action. The worker cannot trigger a
 containment action.
 
-The only code path that calls the Rust proxy is the Discord bot's
-approval handler in `discord_bot/handlers/approvals.py`, which runs in
-response to a Discord button click. The button click itself is
-authenticated end to end: Discord signs the interaction with Ed25519,
-the bot verifies the signature against the application's public key in
-`discord_bot/security.py`, the handler then signs an `ActionRequest`
-with the shared HMAC secret, and the proxy verifies that signature
-before doing anything else.
+The only code path that calls the Rust proxy is
+`shared.approval_service`, reached after a human approves. Both surfaces
+go through it: the operational console (an operator clicks Approve in the
+web app, authenticated by a Supabase session) and the optional notifier
+(a Discord button click, verified end to end with Ed25519). Whichever
+surface is used, `approval_service` writes the audit entry, signs an
+`ActionRequest` with the shared HMAC secret, and only then calls the
+proxy, which verifies that signature before doing anything else. The
+console and the notifier share this path byte for byte, so the approval
+contract is identical no matter where the click came from.
 
 The static invariant is enforced by a test:
 `tests/test_p0_regressions.py::test_worker_triage_never_invokes_proxy`
 greps the worker modules at import time and at source level for any
-reference to `discord_bot.proxy_client.execute_action`. If the worker
-ever imports that symbol, the test fails. The check covers both eager
-imports and lazy imports inside functions.
+reference to the proxy execute path. If the worker ever imports that
+symbol, the test fails. The check covers both eager imports and lazy
+imports inside functions.
 
 ### Rule 5: DRY_RUN by default
 
@@ -200,8 +206,9 @@ in business logic.
 | Surface | How tenants are separated |
 |---|---|
 | Redis queue | Key namespace: `vyrox:alerts:{tenant_id}` |
-| SQLite tables | Every row carries `tenant_id`; queries filter on it |
-| Discord channels | `DiscordGuild.tenant_id` maps Discord server to tenant |
+| Database tables | Every row carries `tenant_id`; queries filter on it |
+| Console API | Every route runs `assert_tenant_allowed` before any query |
+| Optional notifier (Discord) | `DiscordGuild.tenant_id` maps a Discord server to a tenant |
 | Webhook secrets | Looked up per tenant in `tenant_credentials.webhook_secret_encrypted` |
 | Audit log | Each entry carries `tenant_id`; export endpoints filter server-side |
 | Token budget | Daily ledger keyed on `tenant_id` and date |
@@ -271,13 +278,12 @@ environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
 ## Approval flow
 
 ```
-   Discord button click
+   Human clicks Approve
+   ├─ operator console (Supabase session)         the product surface
+   └─ optional notifier, e.g. Discord button      Ed25519 verified
             │
             ▼
-   bot /interactions   ◀──── Ed25519 verify against settings.discord_public_key
-            │
-            ▼
-   custom_id parse  ──▶ approve / deny / investigate
+   shared.approval_service.approve_alert     ◀──── one path for both surfaces
             │
             ▼  (approve only)
    AlertRecord lookup by alert_id + tenant_id
@@ -308,9 +314,10 @@ environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
    Audit "approve.executed"
 ```
 
-The flow's idempotency story has three layers. The bot checks the
-`AlertRecord.status` before generating a request ID, so a double-click
-returns "already approved". The proxy keeps a per-request-ID nonce
+The flow's idempotency story has three layers. The approval service
+checks the `AlertRecord.status` before generating a request ID, so a
+double-click (from either surface) returns "already approved". The proxy
+keeps a per-request-ID nonce
 store with ten minute retention, so a network retry replays the cached
 response instead of calling the EDR twice. The audit entry is written
 once per state transition; replayed requests do not double-log.
@@ -369,8 +376,8 @@ What we can commit publicly:
   it, and we provide export at any time. The format is the contract,
   not our retention policy.
 - Containment proceeds only after a human approves the action (in the
-  operational console, or via a notifier such as the Discord bot that
-  ships today). There is no autonomous containment path.
+  operational console, or via an optional notifier such as the Discord
+  bot). There is no autonomous containment path.
 - Webhook authentication failures and proxy signature failures both
   return generic 401 responses. We never tell a caller which part of
   the credential was wrong.
@@ -392,24 +399,24 @@ them. The proxy is intentionally small. About a thousand lines of code
 including tests, splitting across `main`, `hmac`, `audit`, `nonce`,
 `edr`, and `actions`.
 
-**SQLite for the pilot.** SQLite with WAL mode and a single writer
-process handles the pilot scale (ten tenants, low hundreds of alerts
-per day per tenant). Write contention bites somewhere around twenty
-five tenants, which is the trigger for the Postgres migration. The
-schema is already SQLModel-compatible, so the migration is a SQL dump
-plus a connection string change, not a rewrite.
+**Postgres for the deployment; SQLite only for a local checkout.** The
+deployed stack runs Postgres, addressed by `DATABASE_URL`, with the
+console API in front. A local checkout with no `DATABASE_URL` set falls
+back to SQLite with WAL mode, which is fine for a single-developer run but
+is not the deploy target. The schema is SQLModel-compatible across both, so
+the only difference is the connection string and the migration runner.
 
-**The operational console as the surface; Discord as a notifier.** The
+**The operational console is the surface; Discord is a notifier.** The
 product surface is the web operational console: cross-tenant work queue,
 decision view, per-tenant autonomy controls, evidence export, audit
-search. The console is in active development and lands as part of the
-`0.2.0` milestone (see [`ROADMAP.md`](ROADMAP.md)). The path that ships
-today is the Discord bot: it handles onboarding, alert review, approval,
-and slash commands for stats and audit export, and the benefit is that a
-customer's first five-minute experience is "I added your bot to my server
-and a synthetic alert appeared." As the console lands, Discord becomes one
-of several optional notifiers (Slack and email follow) that mirror the
-decision card, rather than the operator UI itself.
+search. It is two authenticated web apps (the operator console and a
+founder super-admin app) in front of a FastAPI console API, and it is the
+path an operator approves through. Discord is a retired surface, kept only
+as one optional notifier (Slack and email follow) that mirrors the
+decision card. The important property is that whichever surface a human
+clicks Approve in, the action runs through the same
+`shared.approval_service`, so the audit trail and the approval contract do
+not depend on the surface.
 
 **Two-stage triage.** A pure LLM design is slow, expensive at scale,
 and not auditable without careful prompt engineering. A pure rules
