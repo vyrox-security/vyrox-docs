@@ -52,6 +52,13 @@ Pipeline in five steps:
    on request ID, writes an audit entry, then either dry-runs or calls
    the EDR vendor's API.
 
+In active development (see [`ROADMAP.md`](ROADMAP.md)): per-client evidence
+packs built on the audit chain (scrubbed, signed, verifiable with a bundled
+open-source script), a web operational console as the primary surface with
+Discord becoming one of several notifiers, real rollback for containment
+actions, and a per-tenant autonomy policy layer that defaults to human
+approval. None of these change the six rules below.
+
 Six rules hold across the whole pipeline. They are documented in
 [`ARCHITECTURE.md`](ARCHITECTURE.md#critical-rules) and enforced by tests.
 The shortest version:
