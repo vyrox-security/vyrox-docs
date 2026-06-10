@@ -63,10 +63,45 @@ sixteen blocker items that all shipped between 2026-05-21 and
   first and falls back to the legacy REST-style Redis variables. The
   worker refuses to start with no Redis URL.
 
-## In flight
+## In flight: the v0.2.0 milestone
 
-Tracked in the private `todo.md`; called out here when the work
-touches a public contract.
+The next minor release across the public repos is `0.2.0`, and it is a
+single coherent milestone: Vyrox closes the loop and proves it. Committed
+scope, in build order:
+
+- **Per-client evidence packs.** A generator over the existing SHA-256
+  hash-chained audit log: for any tenant and date range, a report of every
+  alert, verdict, approver, action, and result, with the hash links that
+  prove the record was not altered. Secret redaction is a blocking
+  requirement before any pack output. Quiet periods render as positive
+  proof ("0 incidents, N alerts auto-closed benign, chain verified"),
+  not empty tables. Packs carry a `format_version` from day one and a
+  signature over the chain head (public key at
+  `vyrox.dev/.well-known/`).
+- **Bundled offline verifier.** Each pack ships with a single-file
+  open-source script that re-hashes the chain and checks the signature
+  with no Vyrox dependencies. A pip-installable standalone package with a
+  published schema follows once the pack format stabilises. (This
+  supersedes the earlier "Rust binary verifier" item; the Python
+  reference in `AUDIT_CHAIN.md` remains the spec.)
+- **Real rollback.** Inverse actions on the proxy (un-isolate host,
+  restore network) on the same HMAC + audit + rate-limit path as
+  `/execute`. A failed rollback pages a human; it is never silent. This
+  is the proxy's own `0.2.0`.
+- **Postgres + org/tenant model + RBAC.** With a chain continuity check:
+  the SQLite-era audit chain must verify end-to-end after migration.
+- **Autonomy policy layer, default human approval.** A per-tenant,
+  per-action-type policy that maps verdict, confidence, and action risk
+  to auto-close, human-approval, or (gated off by default) auto-execute.
+  The invariant, enforced by a truth-table test: at the default level, no
+  input ever executes without a human.
+- **Operational console.** A web interface: cross-tenant work queue,
+  decision view with the explainable rationale, per-tenant autonomy
+  controls, evidence export, audit search. Discord becomes one of
+  several notifiers (Slack and email follow) rather than the only
+  surface.
+
+Other in-flight items that touch public contracts:
 
 - **Postgres migration before tenant twenty five.** SQLite write
   contention is the binding constraint at scale. The schema is
@@ -93,10 +128,10 @@ Public-facing items only. The internal product roadmap covers more.
 - **Programmatic API.** A REST API for tenants to fetch verdicts,
   audit entries, and statistics outside of Discord. OAuth2 client
   credentials per tenant. Prerequisite for MSP integrations.
-- **Customer-side audit verifier.** A small Rust binary that walks a
-  tenant's `audit-YYYY-MM-DD.jsonl` directory and verifies the
-  chain. Distributed as a single static binary. The Python reference
-  in `AUDIT_CHAIN.md` is the spec.
+- **Standalone verifier package.** The bundled per-pack verify script
+  (v0.2.0, above) extracted into a pip-installable package with a
+  published pack schema and an explicit compatibility policy. A static
+  binary build may follow.
 - **EU data region.** Per-tenant `data_region` flag. Ingestion
   endpoint shard. No cross-region data flow. Required for any EU
   customer with a GDPR review.
@@ -107,10 +142,9 @@ Public-facing items only. The internal product roadmap covers more.
 - **Public OpenAPI spec.** The four ingestion routes and the two
   proxy routes documented in `API_REFERENCE.md`. Auto-generated
   from FastAPI on the public side; hand-written for the Rust proxy.
-- **Web operator interface.** Read-only first. Tenant status, recent
-  verdicts, audit search, monthly digests. Triggered when a customer
-  refuses Discord-only or when total customer count crosses double
-  digits, whichever first.
+- **Monthly per-client proof report.** A recurring, brandable version
+  of the evidence pack an MSSP can hand each client. Specified; build
+  is triggered by the first design partner that wants it.
 
 ## Adapter coverage
 
@@ -142,12 +176,16 @@ contract a new adapter must follow is in [`ADAPTERS.md`](ADAPTERS.md).
 
 ## Versioning and release cadence
 
-The four public repos follow semver. Today everything is `0.1.x`. The
-audit log format will get an explicit `schema_version` field before we
-bump to `0.2.x`. The HMAC signing format and the public webhook URL
-shape will not change between `0.x` releases without a deprecation
-notice in the relevant repo's `CHANGELOG.md` at least thirty days
-ahead.
+The four public repos follow semver. Today everything is `0.1.x`; the
+committed scope above ships as the `0.2.0` milestone. The audit log
+format gets its explicit `schema_version` field as part of that
+milestone (the evidence pack's `format_version` requirement), before
+anything bumps to `0.2.x`. The HMAC signing format and the public
+webhook URL shape will not change between `0.x` releases without a
+deprecation notice in the relevant repo's `CHANGELOG.md` at least
+thirty days ahead. (The private core repo versions independently and
+is already past `1.x`; its release for this milestone maps to product
+`0.2.0`.)
 
 Patch releases happen as needed. Minor releases happen when a
 meaningful feature lands. Major releases are reserved for breaking
@@ -162,9 +200,10 @@ A short list, kept honest, of capabilities we do not plan to build.
   SIEM.
 - A managed SOC service with humans. We are a software platform. We
   point customers at MSSPs for the human SOC layer.
-- A web dashboard during alpha. The first ten pilots use Discord
-  exclusively. The dashboard ships when triggered (see "Planned,
-  not started" above), not on a calendar.
+- A SOAR playbook builder. The autonomy policy layer (v0.2.0) is a
+  small, testable decision function with a per-tenant dial, not a
+  general workflow engine. Customers who want arbitrary playbooks
+  have SOAR products.
 - A free public ingestion endpoint. The ingestion service is operated
   per tenant. Anyone running their own can use the open path
   documented in [`QUICKSTART.md`](QUICKSTART.md).
