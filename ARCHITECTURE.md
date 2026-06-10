@@ -368,8 +368,9 @@ What we can commit publicly:
 - The audit log is customer-owned. We do not lose it, we do not modify
   it, and we provide export at any time. The format is the contract,
   not our retention policy.
-- Containment proceeds only after a human in Discord clicks Approve.
-  There is no autonomous containment path.
+- Containment proceeds only after a human approves the action (in the
+  operational console, or via a notifier such as the Discord bot that
+  ships today). There is no autonomous containment path.
 - Webhook authentication failures and proxy signature failures both
   return generic 401 responses. We never tell a caller which part of
   the credential was wrong.
@@ -398,14 +399,17 @@ five tenants, which is the trigger for the Postgres migration. The
 schema is already SQLModel-compatible, so the migration is a SQL dump
 plus a connection string change, not a rewrite.
 
-**Discord as the operator UI.** The first ten pilots use Discord
-exclusively. The bot handles onboarding, alert review, approval, and
-slash commands for stats and audit export. The cost is one extra
-infrastructure provider; the benefit is that a customer's first
-five-minute experience is "I added your bot to my server and a
-synthetic alert appeared." A web dashboard ships when a prospect
-refuses Discord or when customer count reaches eleven, whichever comes
-first.
+**The operational console as the surface; Discord as a notifier.** The
+product surface is the web operational console: cross-tenant work queue,
+decision view, per-tenant autonomy controls, evidence export, audit
+search. The console is in active development and lands as part of the
+`0.2.0` milestone (see [`ROADMAP.md`](ROADMAP.md)). The path that ships
+today is the Discord bot: it handles onboarding, alert review, approval,
+and slash commands for stats and audit export, and the benefit is that a
+customer's first five-minute experience is "I added your bot to my server
+and a synthetic alert appeared." As the console lands, Discord becomes one
+of several optional notifiers (Slack and email follow) that mirror the
+decision card, rather than the operator UI itself.
 
 **Two-stage triage.** A pure LLM design is slow, expensive at scale,
 and not auditable without careful prompt engineering. A pure rules

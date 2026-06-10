@@ -103,8 +103,9 @@ Your adapter MUST produce one. Three constraints:
 - `id` is a fresh internal UUID. Do not reuse the vendor's
   identifier. Store the vendor's ID in `raw_id` instead. The two are
   not the same: `raw_id` is for vendor-side dedup; `id` is the
-  Vyrox-internal identifier referenced by audit entries and Discord
-  buttons.
+  Vyrox-internal identifier referenced by audit entries and the
+  approval action (in the console, or on a notifier such as the Discord
+  bot's buttons).
 
 Missing optional fields default to `None` or empty string. Never to a
 placeholder like `"unknown"`, the triage engine treats `None` and

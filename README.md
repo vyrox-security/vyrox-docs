@@ -45,12 +45,16 @@ Pipeline in five steps:
    JSON schema response. The LLM never executes anything. It only writes
    verdict fields. A Pydantic validator catches malformed responses and
    falls back to a conservative MEDIUM verdict at 0.5 confidence.
-5. CRITICAL and HIGH verdicts land in the tenant's Discord channel as an
-   embed with Approve, Deny, and Investigate buttons. Approve generates an
-   `ActionRequest`, signs it, and sends it to the Rust proxy. The proxy
-   verifies the signature, checks a thirty-second replay window, dedupes
-   on request ID, writes an audit entry, then either dry-runs or calls
-   the EDR vendor's API.
+5. CRITICAL and HIGH verdicts surface in the operational console for a
+   human, as a decision view with Approve, Deny, and Investigate actions.
+   An optional notifier (Discord today, Slack and email to follow) mirrors
+   the same card so an operator can act without watching the console; the
+   notifier path is what ships today while the console lands (see
+   [`ROADMAP.md`](ROADMAP.md)). Approve generates an `ActionRequest`,
+   signs it, and sends it to the Rust proxy. The proxy verifies the
+   signature, checks a thirty-second replay window, dedupes on request ID,
+   writes an audit entry, then either dry-runs or calls the EDR vendor's
+   API.
 
 In active development (see [`ROADMAP.md`](ROADMAP.md)): per-client evidence
 packs built on the audit chain (scrubbed, signed, verifiable with a bundled
