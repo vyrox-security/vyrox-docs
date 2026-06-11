@@ -33,11 +33,14 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
                                                                   + Pydantic schema validation
                                                                   + per-tenant daily token budget
                                               4. Persist          (SQLite, tenant-scoped tables)
-                                              5. Notify           (signed HTTP to bot)
+                                                                  surfaced alerts land in the
+                                                                  console work queue
+                                              5. Notify           (optional notifier mirror,
+                                                                  Discord today)
 
-                                              Discord bot (FastAPI)
-                                              ├─ /interactions  (Ed25519 verified)
-                                              ├─ /webhook       (HMAC verified)
+                                              Console API (FastAPI)
+                                              ├─ /api/*         (JWT verified per request)
+                                              ├─ tenant guard   (per-request allow-list check)
                                               └─ approval flow  ▶ Rust proxy
 
                                               Rust proxy
@@ -48,9 +51,9 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
                                               └─ EDR API call      (or DRY_RUN short-circuit)
 ```
 
-All five services are independent processes. They communicate over HTTP
+Every service is an independent process. They communicate over HTTP
 and Redis only. There is no shared in-process state across services. The
-SQLite database is shared between the worker and the Discord bot in the
+SQLite database is shared between the worker and the console API in the
 current pilot deployment. A future Postgres migration is tracked in
 `todo.md` (private) before tenant count reaches twenty five.
 
@@ -59,8 +62,9 @@ current pilot deployment. A future Postgres migration is tracked in
 | Component | Language | Process | What it owns |
 |---|---|---|---|
 | Ingestion | Python, FastAPI | `uvicorn ingestion.main:app` | Webhook auth, vendor payload normalisation, Redis enqueue |
-| Worker | Python, asyncio | `python -m worker.main` | Triage pipeline, persistence, Discord notification |
-| Discord bot | Python, FastAPI | `uvicorn discord_bot.main:app` | Interaction handling, approval flow, signing toward the proxy |
+| Worker | Python, asyncio | `python -m worker.main` | Triage pipeline, persistence, notifier dispatch |
+| Console API | Python, FastAPI | `uvicorn console.main:app` | Operator auth, work queue, decision view, approval flow, signing toward the proxy |
+| Discord bot (optional notifier) | Python, FastAPI | `uvicorn discord_bot.main:app` | Mirrors the decision card into Discord; only runs when a deployment enables it |
 | Containment proxy | Rust, Axum | `vyrox-proxy` | HMAC verify, replay window, nonce dedup, audit, EDR API call |
 | Heuristics engine | Python | imported by the worker | Pattern matching, Noisy OR aggregation |
 
@@ -137,20 +141,24 @@ The LLM cannot trigger a containment action. The heuristics engine
 cannot trigger a containment action. The worker cannot trigger a
 containment action.
 
-The only code path that calls the Rust proxy is the Discord bot's
-approval handler in `discord_bot/handlers/approvals.py`, which runs in
-response to a Discord button click. The button click itself is
-authenticated end to end: Discord signs the interaction with Ed25519,
-the bot verifies the signature against the application's public key in
-`discord_bot/security.py`, the handler then signs an `ActionRequest`
-with the shared HMAC secret, and the proxy verifies that signature
-before doing anything else.
+The only code path that calls the Rust proxy is the shared approval
+service in `shared/approval_service.py`, and the only thing that invokes
+it is an authenticated human action. The primary surface is the
+operator console: clicking Approve hits the console API, which verifies
+the operator's JWT, checks the tenant against the operator's allow-list,
+then signs an `ActionRequest` with the shared HMAC secret. The proxy
+verifies that signature before doing anything else. Where a tenant has
+the Discord notifier enabled, the Approve button on the mirrored card
+is the same story with different front-door auth: Discord signs the
+interaction with Ed25519, the bot verifies it against the application's
+public key in `discord_bot/security.py`, and the handler routes through
+the same shared approval service.
 
 The static invariant is enforced by a test:
 `tests/test_p0_regressions.py::test_worker_triage_never_invokes_proxy`
 greps the worker modules at import time and at source level for any
-reference to `discord_bot.proxy_client.execute_action`. If the worker
-ever imports that symbol, the test fails. The check covers both eager
+reference to the proxy client's `execute_action`. If the worker ever
+imports that symbol, the test fails. The check covers both eager
 imports and lazy imports inside functions.
 
 ### Rule 5: DRY_RUN by default
@@ -201,7 +209,8 @@ in business logic.
 |---|---|
 | Redis queue | Key namespace: `vyrox:alerts:{tenant_id}` |
 | SQLite tables | Every row carries `tenant_id`; queries filter on it |
-| Discord channels | `DiscordGuild.tenant_id` maps Discord server to tenant |
+| Console API | Every request resolves a principal (user, org, role, tenant allow-list); a `tenant_id` outside the allow-list returns 403 before any query runs |
+| Discord channels (optional notifier) | `DiscordGuild.tenant_id` maps Discord server to tenant |
 | Webhook secrets | Looked up per tenant in `tenant_credentials.webhook_secret_encrypted` |
 | Audit log | Each entry carries `tenant_id`; export endpoints filter server-side |
 | Token budget | Daily ledger keyed on `tenant_id` and date |
@@ -215,12 +224,20 @@ fails the HMAC check and returns 401. A payload with no identifier
 returns 400. There is no path where an unmatched payload lands on a
 shared queue.
 
-Cross-tenant access from inside the Discord bot is blocked by
-`discord_bot/main.py:312`. The `custom_id` of every approval button
-embeds the alert's tenant ID. Before calling the approval handler, the
-bot checks that the alert tenant matches the Discord guild's tenant.
-A mismatch returns "This action is not valid for this server" without
-contacting the proxy.
+Cross-tenant access in the console is blocked per request. The console
+API turns every verified JWT into a principal carrying an explicit
+tenant allow-list, and a guard check runs before any tenant-scoped
+query: a super admin sees everything, an org admin sees its org's
+tenants, an analyst sees only its assigned tenants. A `tenant_id`
+outside the allow-list returns 403, and a tenant that does not exist is
+denied the same way so the response never leaks existence.
+
+Cross-tenant access from inside the optional Discord notifier is
+blocked the same way it always was. The `custom_id` of every approval
+button embeds the alert's tenant ID. Before calling the approval
+handler, the bot checks that the alert tenant matches the Discord
+guild's tenant. A mismatch returns "This action is not valid for this
+server" without contacting the proxy.
 
 ## Two-stage triage
 
@@ -271,15 +288,12 @@ environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
 ## Approval flow
 
 ```
-   Discord button click
+   Operator clicks Approve in the console
             │
             ▼
-   bot /interactions   ◀──── Ed25519 verify against settings.discord_public_key
+   console /api/actions/{id}/approve   ◀──── JWT verified, tenant allow-list checked
             │
             ▼
-   custom_id parse  ──▶ approve / deny / investigate
-            │
-            ▼  (approve only)
    AlertRecord lookup by alert_id + tenant_id
             │
             ▼
@@ -291,7 +305,7 @@ environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
    Audit "approve.requested"      ◀──── written before any outbound call
             │
             ▼
-   proxy_client.execute_action()
+   approval_service ▶ proxy_client.execute_action()
    body signed with vyrox_hmac_secret (deterministic JSON)
             │
             ▼
@@ -308,12 +322,18 @@ environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
    Audit "approve.executed"
 ```
 
-The flow's idempotency story has three layers. The bot checks the
-`AlertRecord.status` before generating a request ID, so a double-click
-returns "already approved". The proxy keeps a per-request-ID nonce
-store with ten minute retention, so a network retry replays the cached
-response instead of calling the EDR twice. The audit entry is written
-once per state transition; replayed requests do not double-log.
+The optional Discord notifier mirrors the decision card and its
+Approve button enters the same flow one step earlier: the bot verifies
+the Ed25519 interaction signature, then calls the same shared approval
+service. One approval path, two front doors, identical audit story.
+
+The flow's idempotency story has three layers. The approval service
+checks the `AlertRecord.status` before generating a request ID, so a
+double-click returns "already approved". The proxy keeps a
+per-request-ID nonce store with ten minute retention, so a network
+retry replays the cached response instead of calling the EDR twice.
+The audit entry is written once per state transition; replayed
+requests do not double-log.
 
 ## Configuration
 
@@ -331,13 +351,13 @@ know about:
 | `VYROX_HMAC_SECRET` | all | Sixty four hex characters. Signs Python ↔ Python and Python ↔ Rust traffic. |
 | `REDIS_URL` | ingestion, worker | `redis://` or `rediss://` URL. The legacy REST-style Redis variables are still accepted for backward compatibility but new deployments should set this. |
 | `OPENCODE_ZEN_API_KEY` | worker | LLM provider key. Empty falls back to the legacy `OPENROUTER_API_KEY` during the migration window. |
-| `DISCORD_BOT_TOKEN` | bot | Discord application token. |
-| `DISCORD_PUBLIC_KEY` | bot | Application public key for interaction Ed25519 verification. Empty skips verification (local dev only). |
+| `DISCORD_BOT_TOKEN` | notifier (optional) | Discord application token. Only needed when the Discord notifier is enabled. |
+| `DISCORD_PUBLIC_KEY` | notifier (optional) | Application public key for interaction Ed25519 verification. Empty skips verification (local dev only). |
 | `CROWDSTRIKE_WEBHOOK_SECRET` | ingestion | Vendor-default HMAC secret. Per-tenant secrets stored in `tenant_credentials` override this. |
 | `SENTINELONE_WEBHOOK_SECRET` | ingestion | Vendor-default bearer token. |
 | `DEFENDER_WEBHOOK_SECRET` | ingestion | Defender Graph `clientState` value used as bearer. |
 | `AUDIT_LOG_PATH` | all writers | Directory for daily JSONL files. The hash chain depends on this surviving restart. |
-| `VYROX_PROXY_URL` | bot | Base URL of the Rust proxy. |
+| `VYROX_PROXY_URL` | console API, notifier | Base URL of the Rust proxy. |
 | `DRY_RUN` | proxy | `true` by default. Production opts in to real EDR calls. |
 
 ## What is in the private side
@@ -347,7 +367,8 @@ The boundary makes contribution clear.
 
 The private monorepo holds the implementation of the pipeline above.
 File names mirror the layout described here (`ingestion/`, `worker/`,
-`discord_bot/`, `shared/`, `playbook/`, `migrations/`, `tests/`). The
+`console/`, `notify/`, `discord_bot/`, `shared/`, `playbook/`,
+`migrations/`, `tests/`). The
 Python tests covering the public contracts have public-safe names
 (`test_p0_regressions.py`, `test_p05_blockers.py`). Anyone with access
 can map a private fix to a public contract in seconds.
@@ -368,9 +389,9 @@ What we can commit publicly:
 - The audit log is customer-owned. We do not lose it, we do not modify
   it, and we provide export at any time. The format is the contract,
   not our retention policy.
-- Containment proceeds only after a human approves the action (in the
-  operational console, or via a notifier such as the Discord bot that
-  ships today). There is no autonomous containment path.
+- Containment proceeds only after a human approves the action, in the
+  operational console or on the mirrored card in an optional notifier
+  such as Discord. There is no autonomous containment path.
 - Webhook authentication failures and proxy signature failures both
   return generic 401 responses. We never tell a caller which part of
   the credential was wrong.
@@ -399,17 +420,16 @@ five tenants, which is the trigger for the Postgres migration. The
 schema is already SQLModel-compatible, so the migration is a SQL dump
 plus a connection string change, not a rewrite.
 
-**The operational console as the surface; Discord as a notifier.** The
+**The operational console as the surface; notifiers as mirrors.** The
 product surface is the web operational console: cross-tenant work queue,
 decision view, per-tenant autonomy controls, evidence export, audit
-search. The console is in active development and lands as part of the
-`0.2.0` milestone (see [`ROADMAP.md`](ROADMAP.md)). The path that ships
-today is the Discord bot: it handles onboarding, alert review, approval,
-and slash commands for stats and audit export, and the benefit is that a
-customer's first five-minute experience is "I added your bot to my server
-and a synthetic alert appeared." As the console lands, Discord becomes one
-of several optional notifiers (Slack and email follow) that mirror the
-decision card, rather than the operator UI itself.
+search. That is where an operator signs in, reviews a decision, and
+clicks Approve. Notifiers are optional mirrors of the decision card.
+Discord ships today (Slack and email follow), wired through a small
+`Notifier` interface so a deployment that does not enable one never
+constructs it. The split earns its keep both ways: the console carries
+the full cross-tenant operator workflow, and a notifier lets an
+operator act on a single decision without watching a browser tab.
 
 **Two-stage triage.** A pure LLM design is slow, expensive at scale,
 and not auditable without careful prompt engineering. A pure rules
