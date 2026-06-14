@@ -52,8 +52,9 @@ Pipeline in five steps:
    can act on a single decision without watching the console. Approve
    generates an `ActionRequest`, signs it, and sends it to the Rust
    proxy. The proxy verifies the signature, checks a thirty-second replay
-   window, dedupes on request ID, writes an audit entry, then either
-   dry-runs or calls the EDR vendor's API.
+   window, dedupes on request ID, writes an audit entry, then dispatches
+   to the tenant's configured EDR connector (a demo tenant runs against a
+   bundled mock EDR, with the action tagged `simulated`).
 
 In active development (see [`ROADMAP.md`](ROADMAP.md)): per-client evidence
 packs built on the audit chain (scrubbed, signed, verifiable with a bundled
@@ -69,8 +70,9 @@ The shortest version:
 - Every state change writes an audit entry before the response goes back.
 - HMAC verification happens before any payload is parsed.
 - The LLM cannot trigger containment. Only a human button click can.
-- Local development sets `DRY_RUN=true` by default so the proxy refuses to
-  call real EDR APIs.
+- There is no global DRY_RUN switch; the proxy always dispatches to the
+  tenant's configured EDR. A demo tenant runs against a bundled mock EDR,
+  with the action tagged `simulated`.
 - LLM JSON output is never passed to `exec`, `eval`, `subprocess`, SQL, or
   file operations. Only to Pydantic-validated verdict fields.
 
