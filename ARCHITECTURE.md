@@ -48,7 +48,7 @@ If you want the on-disk audit format, see [`AUDIT_CHAIN.md`](AUDIT_CHAIN.md).
                                               ├─ replay window     (±30s)
                                               ├─ nonce dedup       (DashMap, 10min retention)
                                               ├─ audit append      (hash-chained JSONL)
-                                              └─ EDR API call      (or DRY_RUN short-circuit)
+                                              └─ EDR connector     (real vendor, or demo mock; simulated)
 ```
 
 The services are independent processes. They communicate over HTTP and
@@ -159,28 +159,29 @@ reference to the proxy execute path. If the worker ever imports that
 symbol, the test fails. The check covers both eager imports and lazy
 imports inside functions.
 
-### Rule 5: DRY_RUN by default
+### Rule 5: Per-tenant EDR connector (no global DRY_RUN)
 
-The Rust proxy's `dry_run` flag is `true` by default. Production has to
-opt in to real execution by setting `DRY_RUN=false` in the environment.
-The check happens before the EDR client is even constructed, so
-mis-configuration cannot accidentally call the vendor's API.
+There is no global `DRY_RUN` kill-switch. The Rust proxy always dispatches
+to the tenant's configured EDR connector. Safety comes from two places, not
+a global switch: human approval (Rule 4) gates every containment action, and
+connector configuration. A demo tenant (`is_demo=true`) points its
+`edr_base_url` at a bundled mock EDR and runs the real execute/rollback path
+against a simulated fleet; the proxy tags such actions `simulated=true`, an
+honesty label recorded in the audit and the evidence pack. The flag does not
+change behavior, so a demo action genuinely executes and stays rollback-able.
+A tenant configured with a real vendor but missing or invalid credentials
+fails closed at the connector.
 
 ```rust
-// vyrox-proxy/src/main.rs
-let response = if state.dry_run {
-    info!(/* ... */, "DRY_RUN: skipping EDR call");
-    ExecuteResponse { status: "dry_run".to_string(), dry_run: true }
-} else {
-    state.edr.dispatch(payload.action_type, &payload.host).await
-};
+// vyrox-proxy/src/main.rs — the proxy always dispatches; `simulated` is an
+// honesty label carried from the tenant's is_demo, never an execution switch.
+let outcome = dispatch_edr(&creds, &state.fallback_edr, action, direction, host).await;
+// the response echoes the signed `simulated` flag: { status, simulated }
 ```
 
-The audit entry written on a DRY_RUN action looks identical to a real
-action except for the `dry_run: true` field. That is intentional. An
-operator looking at the audit log can tell the difference, and a
-compliance review on the JSONL stream sees the same chain integrity
-either way.
+The `simulated` flag is recorded in the audit entry, so an operator (or a
+compliance review on the JSONL stream) can tell a demo-tenant action from a
+real one while the hash-chain integrity stays identical either way.
 
 ### Rule 6: LLM output never directly executed
 
@@ -306,10 +307,10 @@ environment variables (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL_1`,
    ├─ replay window check (±30s)
    ├─ nonce.claim_or_replay(request_id)
    ├─ audit::append_audit  ◀──── written before EDR call
-   └─ edr.dispatch (or DRY_RUN short-circuit)
+   └─ edr.dispatch (real vendor, or demo mock EDR)
             │
             ▼
-   ActionRecord.status = "executed" or "dry_run"
+   ActionRecord.status = "executed"
    Alert.status        = "executed"
    Audit "approve.executed"
 ```
@@ -345,7 +346,7 @@ know about:
 | `DEFENDER_WEBHOOK_SECRET` | ingestion | Defender Graph `clientState` value used as bearer. |
 | `AUDIT_LOG_PATH` | all writers | Directory for daily JSONL files. The hash chain depends on this surviving restart. |
 | `VYROX_PROXY_URL` | bot | Base URL of the Rust proxy. |
-| `DRY_RUN` | proxy | `true` by default. Production opts in to real EDR calls. |
+| `VYROX_PROXY_SECRET` | proxy | Dedicated signing secret for proxy requests; falls back to `VYROX_HMAC_SECRET`. |
 
 ## What is in the private side
 

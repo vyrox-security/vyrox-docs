@@ -47,21 +47,20 @@ Pipeline in five steps:
    falls back to a conservative MEDIUM verdict at 0.5 confidence.
 5. CRITICAL and HIGH verdicts surface in the operational console for a
    human, as a decision view with Approve, Deny, and Investigate actions.
-   An optional notifier (Discord today, Slack and email to follow) mirrors
-   the same card so an operator can act without watching the console; the
-   notifier path is what ships today while the console lands (see
-   [`ROADMAP.md`](ROADMAP.md)). Approve generates an `ActionRequest`,
-   signs it, and sends it to the Rust proxy. The proxy verifies the
-   signature, checks a thirty-second replay window, dedupes on request ID,
-   writes an audit entry, then either dry-runs or calls the EDR vendor's
-   API.
+   The console is the primary surface; an optional notifier (Discord
+   today, Slack and email to follow) mirrors the same card so an operator
+   can act on a single decision without watching the console. Approve
+   generates an `ActionRequest`, signs it, and sends it to the Rust
+   proxy. The proxy verifies the signature, checks a thirty-second replay
+   window, dedupes on request ID, writes an audit entry, then dispatches
+   to the tenant's configured EDR connector (a demo tenant runs against a
+   bundled mock EDR, with the action tagged `simulated`).
 
 In active development (see [`ROADMAP.md`](ROADMAP.md)): per-client evidence
 packs built on the audit chain (scrubbed, signed, verifiable with a bundled
-open-source script), a web operational console as the primary surface with
-Discord becoming one of several notifiers, real rollback for containment
-actions, and a per-tenant autonomy policy layer that defaults to human
-approval. None of these change the six rules below.
+open-source script), real rollback for containment actions, and a
+per-tenant autonomy policy layer that defaults to human approval. None of
+these change the six rules below.
 
 Six rules hold across the whole pipeline. They are documented in
 [`ARCHITECTURE.md`](ARCHITECTURE.md#critical-rules) and enforced by tests.
@@ -71,8 +70,9 @@ The shortest version:
 - Every state change writes an audit entry before the response goes back.
 - HMAC verification happens before any payload is parsed.
 - The LLM cannot trigger containment. Only a human button click can.
-- Local development sets `DRY_RUN=true` by default so the proxy refuses to
-  call real EDR APIs.
+- There is no global DRY_RUN switch; the proxy always dispatches to the
+  tenant's configured EDR. A demo tenant runs against a bundled mock EDR,
+  with the action tagged `simulated`.
 - LLM JSON output is never passed to `exec`, `eval`, `subprocess`, SQL, or
   file operations. Only to Pydantic-validated verdict fields.
 
@@ -86,7 +86,7 @@ open. The detection intelligence and the operational configuration is not.
 | Rust containment proxy | [`vyrox-proxy`](https://github.com/vyrox-security/vyrox-proxy) | Public, MIT | Customers should be able to read the code that isolates their hosts. |
 | Engineering docs | `vyrox-docs` (this repo) | Public | Threat model, API contracts, contributor guides. |
 | Alert simulator | [`vyrox-simulator`](https://github.com/vyrox-security/vyrox-simulator) | Public, MIT | Lets anyone replay a signed alert against a local stack. |
-| Core monorepo | `vyrox` | Private | Ingestion, worker, Discord bot. The pipeline shape is documented here; the implementation is not. |
+| Core monorepo | `vyrox` | Private | Ingestion, worker, console API, notifiers. The pipeline shape is documented here; the implementation is not. |
 | Heuristics engine | `vyrox-heuristics` | Private | Pattern weights, MITRE technique mapping, false-positive baselines. The detection moat. |
 | Adversarial playbook | `vyrox-adversarial-playbook` | Private | Red-team TTPs we test against. |
 | Infrastructure | `vyrox-deploy` | Private | Provider-specific configs and secrets. |
