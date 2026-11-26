@@ -23,7 +23,7 @@
 # Anyone typing the canonical filename with .md gets the rendered page.
 /*.md                   /:splat.html              301
 
-# Legacy SETUP_GUIDE.md is moved to vyrox-design-partners. Redirect the
+# Legacy SETUP_GUIDE.md was removed (superseded by QUICKSTART.md). Redirect the
 # old public URL to a friendly explainer page.
 /SETUP_GUIDE.html       /QUICKSTART.html          308
 /setup                  /QUICKSTART.html          308

@@ -88,7 +88,6 @@ open. The detection intelligence and the operational configuration is not.
 | Alert simulator | [`vyrox-simulator`](https://github.com/vyrox-security/vyrox-simulator) | Public, MIT | Lets anyone replay a signed alert against a local stack. |
 | Core monorepo | `vyrox` | Private | Ingestion, worker, console API, notifiers. The pipeline shape is documented here; the implementation is not. |
 | Heuristics engine | `vyrox-heuristics` | Private | Pattern weights, MITRE technique mapping, false-positive baselines. The detection moat. |
-| Adversarial playbook | `vyrox-adversarial-playbook` | Private | Red-team TTPs we test against. |
 | Infrastructure | `vyrox-deploy` | Private | Provider-specific configs and secrets. |
 | Partner CRM | `vyrox-design-partners` | Private | GTM, contracts, prospect roster. |
 
